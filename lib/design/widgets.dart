@@ -4,13 +4,14 @@ import 'theme.dart';
 
 /// A full-width colour band with a condensed uppercase title: the guide's section header.
 class Band extends StatelessWidget {
-  const Band(this.title, {super.key, this.color = Guide.blue, this.trailing, this.number});
+  const Band(this.title, {super.key, this.color, this.trailing, this.number});
   final String title;
-  final Color color;
+  final Color? color;
   final Widget? trailing;
   final String? number;
   @override
   Widget build(BuildContext context) {
+    final color = this.color ?? Guide.blue;
     return Container(
       color: color,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
@@ -18,7 +19,7 @@ class Band extends StatelessWidget {
         if (number != null) ...[
           Container(
             width: 22, height: 22, alignment: Alignment.center,
-            decoration: const BoxDecoration(color: Guide.paper),
+            decoration: BoxDecoration(color: Guide.paper),
             child: Text(number!, style: Guide.band(color).copyWith(fontSize: 14)),
           ),
           const SizedBox(width: 10),
@@ -32,14 +33,14 @@ class Band extends StatelessWidget {
 
 /// A black frame around a picture of the game (sprite, icon, screenshot), like a screenshot in a printed guide.
 class Frame extends StatelessWidget {
-  const Frame({super.key, required this.child, this.padding = 4, this.fill = Guide.paper2, this.width = 2});
+  const Frame({super.key, required this.child, this.padding = 4, this.fill, this.width = 2});
   final Widget child;
   final double padding;
-  final Color fill;
+  final Color? fill;
   final double width;
   @override
   Widget build(BuildContext context) => Container(
-        decoration: BoxDecoration(color: fill, border: Border.all(color: Guide.ink, width: width)),
+        decoration: BoxDecoration(color: fill ?? Guide.paper2, border: Border.all(color: Guide.ink, width: width)),
         padding: EdgeInsets.all(padding),
         child: child,
       );
@@ -47,14 +48,14 @@ class Frame extends StatelessWidget {
 
 /// A boxed block of the page: hairline or ink border, paper fill.
 class Box extends StatelessWidget {
-  const Box({super.key, required this.child, this.ink = false, this.fill = Guide.paper, this.padding = const EdgeInsets.all(12)});
+  const Box({super.key, required this.child, this.ink = false, this.fill, this.padding = const EdgeInsets.all(12)});
   final Widget child;
   final bool ink;
-  final Color fill;
+  final Color? fill;
   final EdgeInsets padding;
   @override
   Widget build(BuildContext context) => Container(
-        decoration: BoxDecoration(color: fill, border: Border.all(color: ink ? Guide.ink : Guide.hairline, width: ink ? 2 : 1)),
+        decoration: BoxDecoration(color: fill ?? Guide.paper, border: Border.all(color: ink ? Guide.ink : Guide.hairline, width: ink ? 2 : 1)),
         padding: padding,
         child: child,
       );
@@ -62,11 +63,11 @@ class Box extends StatelessWidget {
 
 /// Primary action: a red band with white condensed caps and a black frame. `busy` shows progress in place.
 class GoButton extends StatelessWidget {
-  const GoButton(this.label, {super.key, this.onPressed, this.busy = false, this.color = Guide.red, this.icon});
+  const GoButton(this.label, {super.key, this.onPressed, this.busy = false, this.color, this.icon});
   final String label;
   final VoidCallback? onPressed;
   final bool busy;
-  final Color color;
+  final Color? color;
   final IconData? icon;
   @override
   Widget build(BuildContext context) {
@@ -76,8 +77,8 @@ class GoButton extends StatelessWidget {
       duration: Guide.fast,
       opacity: solid ? 1 : 0.55,
       child: Material(
-        color: solid ? color : Guide.paper3,
-        shape: const Border.fromBorderSide(Guide.frame),
+        color: solid ? (color ?? Guide.red) : Guide.paper3,
+        shape: Border.fromBorderSide(Guide.frame),
         child: InkWell(
           onTap: enabled ? onPressed : null,
           hoverColor: Colors.black.withValues(alpha: 0.12),
@@ -85,13 +86,13 @@ class GoButton extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               if (busy) ...[
-                const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2.5, color: Guide.paper)),
+                const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2.5, color: Guide.onBand)),
                 const SizedBox(width: 10),
               ] else if (icon != null) ...[
-                Icon(icon, size: 18, color: solid ? Guide.paper : Guide.ink),
+                Icon(icon, size: 18, color: solid ? Guide.onBand : Guide.ink),
                 const SizedBox(width: 8),
               ],
-              Text(label.toUpperCase(), style: Guide.band(solid ? Guide.paper : Guide.inkSoft).copyWith(fontSize: 17)),
+              Text(label.toUpperCase(), style: Guide.band(solid ? Guide.onBand : Guide.inkSoft).copyWith(fontSize: 17)),
             ]),
           ),
         ),
@@ -211,9 +212,9 @@ class StatusCell extends StatelessWidget {
           Text(text ?? '', style: Guide.small()),
         ]);
       case StepMark.done:
-        return Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.check, size: 16, color: Guide.green), const SizedBox(width: 6), Text(text ?? 'done', style: Guide.small(Guide.green))]);
+        return Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.check, size: 16, color: Guide.green), const SizedBox(width: 6), Text(text ?? 'done', style: Guide.small(Guide.green))]);
       case StepMark.failed:
-        return Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.close, size: 16, color: Guide.red), const SizedBox(width: 6), Flexible(child: Text(text ?? 'failed', style: Guide.small(Guide.red)))]);
+        return Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.close, size: 16, color: Guide.red), const SizedBox(width: 6), Flexible(child: Text(text ?? 'failed', style: Guide.small(Guide.red)))]);
     }
   }
 }
@@ -244,9 +245,9 @@ class Paper extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         width: width,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: Guide.paper,
-          boxShadow: [BoxShadow(color: Color(0x40000000), offset: Offset(0, 6), blurRadius: 24)],
+          boxShadow: const [BoxShadow(color: Color(0x40000000), offset: Offset(0, 6), blurRadius: 24)],
         ),
         child: child,
       );

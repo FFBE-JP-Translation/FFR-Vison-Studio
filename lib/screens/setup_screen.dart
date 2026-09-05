@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../design/theme.dart';
 import '../design/widgets.dart';
 import '../design/wordmark.dart';
+import '../design/theme_toggle.dart';
 import '../services/game_locator.dart';
 import '../state/app_state.dart';
 
@@ -36,7 +37,7 @@ class _SetupScreenState extends State<SetupScreen> {
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(28, 26, 28, 10),
-              child: const Wordmark(size: 44),
+              child: Row(children: [const Wordmark(size: 44), const Spacer(), const ThemeToggle()]),
             ),
             const Band('Before you start'),
             Padding(
@@ -64,9 +65,9 @@ class _SetupScreenState extends State<SetupScreen> {
                   const SizedBox(height: 14),
                   Container(
                     height: 150,
-                    decoration: const BoxDecoration(color: Guide.ink),
+                    decoration: BoxDecoration(color: Guide.consoleBg),
                     padding: const EdgeInsets.all(10),
-                    child: SingleChildScrollView(reverse: true, child: Text(app.setupLog.skip(app.setupLog.length > 60 ? app.setupLog.length - 60 : 0).join('\n'), style: Guide.mono(Guide.paper2))),
+                    child: SingleChildScrollView(reverse: true, child: Text(app.setupLog.skip(app.setupLog.length > 60 ? app.setupLog.length - 60 : 0).join('\n'), style: Guide.mono(Guide.consoleFg))),
                   ),
                 ],
                 const SizedBox(height: 22),

@@ -17,6 +17,7 @@ import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'design/theme.dart';
+import 'design/theme_toggle.dart';
 import 'design/widgets.dart';
 import 'design/wordmark.dart';
 import 'screens/home_screen.dart';
@@ -29,7 +30,7 @@ const hostBase = 'https://ffbe.luminest.io/';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await windowManager.ensureInitialized();
-  await windowManager.waitUntilReadyToShow(const WindowOptions(size: Size(1320, 860), minimumSize: Size(1100, 700), title: 'FFR Vision Studio', backgroundColor: Guide.desk), () async {
+  await windowManager.waitUntilReadyToShow(WindowOptions(size: Size(1320, 860), minimumSize: Size(1100, 700), title: 'FFR Vision Studio', backgroundColor: Guide.desk), () async {
     await windowManager.show();
     await windowManager.focus();
   });
@@ -57,12 +58,16 @@ class _StudioAppState extends State<StudioApp> with WindowListener {
     await windowManager.destroy();
   }
   @override
-  Widget build(BuildContext context) => MaterialApp(
-        title: 'FFR Vision Studio',
-        debugShowCheckedModeBanner: false,
-        theme: Guide.theme(),
-        home: const Shell(),
-      );
+  Widget build(BuildContext context) {
+    final app = context.watch<AppState>();
+    Guide.dark = app.dark; // every Guide colour reads this; the keyed subtree redraws the whole page on a switch
+    return MaterialApp(
+      title: 'FFR Vision Studio',
+      debugShowCheckedModeBanner: false,
+      theme: Guide.theme(),
+      home: KeyedSubtree(key: ValueKey(app.dark), child: const Shell()),
+    );
+  }
 }
 
 /// The desk with the spread on it. Header strip carries the title, the unit path and the save state.
@@ -89,7 +94,9 @@ class Shell extends StatelessWidget {
               child: Text(app.notice ?? (app.dirty ? 'saving' : 'saved'), key: ValueKey(app.notice ?? app.dirty), style: Guide.small(app.notice != null ? Guide.red : Guide.inkSoft)),
             ),
             const SizedBox(width: 16),
-            ConstrainedBox(constraints: const BoxConstraints(maxWidth: 420), child: Text(app.gameRoot ?? '', style: Guide.small(Guide.inkFaint), maxLines: 1, overflow: TextOverflow.ellipsis)),
+            ConstrainedBox(constraints: const BoxConstraints(maxWidth: 380), child: Text(app.gameRoot ?? '', style: Guide.small(Guide.inkFaint), maxLines: 1, overflow: TextOverflow.ellipsis)),
+            const SizedBox(width: 14),
+            const ThemeToggle(),
           ]),
           const SizedBox(height: 12),
           Expanded(child: Paper(child: AnimatedSwitcher(duration: Guide.fast, layoutBuilder: (current, previous) => Stack(fit: StackFit.expand, children: [...previous, if (current != null) current]), child: u == null ? const HomeScreen(key: ValueKey('home')) : UnitScreen(key: ValueKey(u['key']))))),

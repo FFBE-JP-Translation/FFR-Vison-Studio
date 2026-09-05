@@ -17,7 +17,7 @@ class Wordmark extends StatelessWidget {
       Container(
         width: size * 1.3,
         height: size,
-        decoration: const BoxDecoration(color: Guide.blue, border: Border.fromBorderSide(Guide.frame)),
+        decoration: BoxDecoration(color: Guide.blue, border: Border.fromBorderSide(Guide.frame)),
         clipBehavior: Clip.hardEdge,
         child: Image.asset('assets/brand/rain_icon.png', fit: BoxFit.cover, filterQuality: FilterQuality.none, alignment: const Alignment(0, -0.2)),
       ),

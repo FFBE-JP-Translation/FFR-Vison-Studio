@@ -92,3 +92,15 @@ const statFields = <(String, String, int, int)>[('MaxHitPoint', 'HP', 200, 3000)
 const elements = ['None', 'Fire', 'Ice', 'Wind', 'Earth', 'Thunder', 'Water', 'Light', 'Dark'];
 const roles = <(String, String)>[('eUnitRole::Attacker', 'Attacker'), ('eUnitRole::Breaker', 'Breaker'), ('eUnitRole::Defender', 'Defender'), ('eUnitRole::Healer', 'Healer'), ('eUnitRole::Enhancer', 'Enhancer'), ('eUnitRole::Jammer', 'Jammer')];
 const tierCap = 8;
+
+/// Brave Exvius rarity: 1..7 are stars, then NV and NV+ (and EX) as written.
+String rarityLabel(dynamic r) {
+  if (r == null) return '-';
+  final s = r.toString();
+  return int.tryParse(s) != null ? '$s★' : s;
+}
+
+String rarityRange(dynamic lo, dynamic hi) => lo == null && hi == null ? '' : (lo == hi || hi == null ? rarityLabel(lo) : '${rarityLabel(lo)} → ${rarityLabel(hi)}');
+
+const _animOrder = ['idle', 'standby', 'move', 'jump', 'atk', 'magicatk', 'magic_atk', 'limitatk', 'limit_atk', 'limitmove', 'limit_move', 'magic_standby', 'win', 'winbefore', 'win_before', 'dying', 'dead'];
+List<String> orderAnims(List<String> a) => [..._animOrder.where(a.contains), ...(a.where((x) => !_animOrder.contains(x)).toList()..sort())];

@@ -35,7 +35,7 @@ class HomeScreen extends StatelessWidget {
       Expanded(
         flex: 5,
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          const Band('Install', color: Guide.red),
+          Band('Install', color: Guide.red),
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
@@ -66,7 +66,7 @@ class HomeScreen extends StatelessWidget {
                 Text('Advanced opens the full studio in your browser: Brave Exvius kit imports, sprite settings, animation edits. It works on the same units.', style: Guide.small()),
                 if (app.buildState != null) ...[const SizedBox(height: 18), const BuildStatus()],
                 const SizedBox(height: 22),
-                const Band('Your game files', color: Guide.ink),
+                Band('Your game files', color: Guide.ink),
                 Box(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(app.modInstalled
@@ -101,11 +101,11 @@ class HomeScreen extends StatelessWidget {
 
   Widget _addEntry(BuildContext context) => Material(
         color: Guide.paper,
-        shape: const Border.fromBorderSide(BorderSide(color: Guide.ink, width: 1.5)),
+        shape: Border.fromBorderSide(BorderSide(color: Guide.ink, width: 1.5)),
         child: InkWell(
           onTap: () => showAddUnit(context),
           hoverColor: Guide.paper2,
-          child: Center(child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.add, color: Guide.ink), const SizedBox(width: 8), Text('ADD A UNIT', style: Guide.band(Guide.ink))])),
+          child: Center(child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.add, color: Guide.ink), const SizedBox(width: 8), Text('ADD A UNIT', style: Guide.band(Guide.ink))])),
         ),
       );
 
@@ -116,7 +116,7 @@ class HomeScreen extends StatelessWidget {
     final lb = u['lb_custom'] as Map?;
     return Material(
       color: Guide.paper,
-      shape: const Border.fromBorderSide(BorderSide(color: Guide.ink, width: 1.5)),
+      shape: Border.fromBorderSide(BorderSide(color: Guide.ink, width: 1.5)),
       child: InkWell(
         onTap: () => app.select(u['key'] as String),
         hoverColor: Guide.paper2,
@@ -158,11 +158,11 @@ Future<void> showRestoreDialog(BuildContext context) async {
     context: context,
     builder: (c) => Dialog(
       backgroundColor: Guide.paper,
-      shape: const Border.fromBorderSide(Guide.frame),
+      shape: Border.fromBorderSide(Guide.frame),
       child: SizedBox(
         width: 640,
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          const Band('Restore the original game', color: Guide.ink),
+          Band('Restore the original game', color: Guide.ink),
           Padding(
             padding: const EdgeInsets.all(20),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
@@ -204,7 +204,7 @@ Future<void> showRestoreDialog(BuildContext context) async {
                             const SizedBox(width: 10),
                             GuideButton('Put back', small: true, onPressed: () async {
                               Navigator.pop(c);
-                              try { await app.restoreGame(backup: backups[i]['id'].toString()); } catch (e) { app.notice = e.toString(); app.notifyListeners(); }
+                              try { await app.restoreGame(backup: backups[i]['id'].toString()); } catch (e) { app.showNotice(e.toString()); }
                             }),
                           ]),
                         ),
@@ -223,7 +223,7 @@ Future<void> showRestoreDialog(BuildContext context) async {
               const SizedBox(width: 8),
               GuideButton('Restore the original game', icon: Icons.history, danger: true, onPressed: err != null ? null : () async {
                 Navigator.pop(c);
-                try { await app.restoreGame(); } catch (e) { app.notice = e.toString(); app.notifyListeners(); }
+                try { await app.restoreGame(); } catch (e) { app.showNotice(e.toString()); }
               }),
             ]),
           ),

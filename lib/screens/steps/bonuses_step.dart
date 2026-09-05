@@ -49,7 +49,7 @@ class _BonusesStepState extends State<BonusesStep> {
     return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          const Band('Stat bonuses', color: Guide.blue),
+          Band('Stat bonuses', color: Guide.blue),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
             child: Text('Type the amount, then drag the black chip onto a tier (or use "add").', style: Guide.small()),
@@ -78,7 +78,7 @@ class _BonusesStepState extends State<BonusesStep> {
                 ),
             ]),
           ),
-          const Band('The game\'s passives', color: Guide.purple),
+          Band('The game\'s passives', color: Guide.purple),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
             child: TextField(decoration: const InputDecoration(hintText: 'Search passives', prefixIcon: Icon(Icons.search, size: 18)), onChanged: (v) => setState(() => q = v)),
@@ -122,7 +122,7 @@ class _BonusesStepState extends State<BonusesStep> {
               final label = statParams.where((p) => p.$1 == (g[1] as num).toInt()).map((p) => p.$2).firstOrNull ?? 'stat ${g[1]}';
               return Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: const BoxDecoration(border: Border(top: BorderSide(color: Guide.hairline))),
+                decoration: BoxDecoration(border: Border(top: BorderSide(color: Guide.hairline))),
                 child: Row(children: [
                   Expanded(child: Text(label, style: Guide.strong())),
                   Text('+', style: Guide.text()),
@@ -139,7 +139,7 @@ class _BonusesStepState extends State<BonusesStep> {
             final png = iconPng(cat, p?['icon'] as String?);
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: const BoxDecoration(border: Border(top: BorderSide(color: Guide.hairline))),
+              decoration: BoxDecoration(border: Border(top: BorderSide(color: Guide.hairline))),
               child: Row(children: [
                 if (png != null) Image.network(app.api!.iconUrl(png), width: 20, height: 20) else const SizedBox(width: 20),
                 const SizedBox(width: 8),

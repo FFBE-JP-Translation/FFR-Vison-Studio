@@ -60,7 +60,7 @@ class _AbilitiesStepState extends State<AbilitiesStep> {
     return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          const Band('The game\'s abilities', color: Guide.blue),
+          Band('The game\'s abilities', color: Guide.blue),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
             child: Row(children: [
@@ -118,7 +118,7 @@ class _AbilitiesStepState extends State<AbilitiesStep> {
             final png = iconPng(cat, tag);
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: const BoxDecoration(border: Border(top: BorderSide(color: Guide.hairline))),
+              decoration: BoxDecoration(border: Border(top: BorderSide(color: Guide.hairline))),
               child: Row(children: [
                 if (png != null) Image.network(app.api!.iconUrl(png), width: 20, height: 20) else const SizedBox(width: 20),
                 const SizedBox(width: 8),

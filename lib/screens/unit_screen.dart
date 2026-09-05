@@ -9,6 +9,8 @@ import 'steps/abilities_step.dart';
 import 'steps/bonuses_step.dart';
 import 'steps/resonance_step.dart';
 import 'steps/stats_step.dart';
+import 'copy_vision_dialog.dart';
+import 'unit_anim_pane.dart';
 
 /// A unit's page: left, the character entry (sprite, stats); right, the walkthrough in four numbered steps.
 class UnitScreen extends StatefulWidget {
@@ -37,11 +39,11 @@ class _UnitScreenState extends State<UnitScreen> {
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(14),
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                Frame(padding: 8, child: form != null ? PixelImage(api.ffbePreview(form, 'idle'), width: 260, height: 200) : PixelImage(api.unitIcon(u['key'] as String, 'face'), width: 128, height: 128)),
+                if (form != null) UnitAnimPane(unit: u, height: 210) else Frame(padding: 8, child: PixelImage(api.unitIcon(u['key'] as String, 'face'), width: 128, height: 128)),
                 const SizedBox(height: 6),
                 Text('${u['attackType'] == 'Magic' ? 'Magic' : 'Physical'} · ${((u['roles'] as List?) ?? []).map((r) => r.toString().replaceAll('eUnitRole::', '')).join(', ')}', style: Guide.small()),
                 const SizedBox(height: 14),
-                const Band('Stats at level 1', color: Guide.blue),
+                Band('Stats at level 1', color: Guide.blue),
                 Box(
                   padding: EdgeInsets.zero,
                   child: Column(children: [
@@ -49,15 +51,19 @@ class _UnitScreenState extends State<UnitScreen> {
                   ]),
                 ),
                 const SizedBox(height: 14),
-                const Band('Resonance', color: Guide.gold),
+                Band('Resonance', color: Guide.gold),
                 Box(child: Text((u['lb_custom'] as Map?)?['desc']?.toString().isNotEmpty == true ? (u['lb_custom'] as Map)['desc'].toString() : 'Set in step 4.', style: Guide.small(Guide.ink))),
-                const SizedBox(height: 18),
+                const SizedBox(height: 14),
+                GuideButton('Play like a vision the game has', icon: Icons.content_copy, small: true, onPressed: () => showCopyVision(context, u, set)),
+                const SizedBox(height: 4),
+                Text('Copies that vision\'s abilities, bonuses, stats and Resonance numbers onto this unit.', style: Guide.small(Guide.inkFaint)),
+                const SizedBox(height: 14),
                 Row(children: [
                   GuideButton('Back to all visions', icon: Icons.arrow_back, small: true, onPressed: () => app.select(null)),
                   const Spacer(),
                   GuideButton('Remove', small: true, danger: true, onPressed: () async {
                     final ok = await showDialog<bool>(context: context, builder: (c) => AlertDialog(
-                      backgroundColor: Guide.paper, shape: const Border.fromBorderSide(Guide.frame),
+                      backgroundColor: Guide.paper, shape: Border.fromBorderSide(Guide.frame),
                       title: Text('Remove ${u['en']} from the mod?', style: Guide.h2()),
                       content: Text('The unit and its choices are deleted from the mod. The next install removes it from the game.', style: Guide.text()),
                       actions: [GuideButton('Keep', onPressed: () => Navigator.pop(c, false)), GuideButton('Remove', danger: true, onPressed: () => Navigator.pop(c, true))],

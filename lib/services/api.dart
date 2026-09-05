@@ -51,6 +51,8 @@ class Api {
   String unitIcon(String key, String kind) => '$base/api/spec/$key/icon/$kind';
   String ffbeIcon(String form) => '$base/api/ffbe/icon/$form';
   String ffbePreview(String form, String anim) => '$base/api/ffbe/preview/$form/$anim';
+  String animUrl(String form, String anim) => '$base/api/ffbe/anim/$form/$anim.webp';
+  Future<List<String>> anims(String form) async => (((await get('/api/ffbe/anims/$form')) as Map)['anims'] as List).map((e) => e.toString()).toList();
   String advancedUrl() => '$base/';
 }
 

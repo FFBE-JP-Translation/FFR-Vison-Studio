@@ -36,7 +36,7 @@ class _StatsStepState extends State<StatsStep> {
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            const Band('Stats at level 1', color: Guide.blue),
+            Band('Stats at level 1', color: Guide.blue),
             Box(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
               child: Column(children: [
@@ -75,7 +75,7 @@ class _StatsStepState extends State<StatsStep> {
         SizedBox(
           width: 340,
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            const Band('Type and roles', color: Guide.ink),
+            Band('Type and roles', color: Guide.ink),
             Box(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text('ATTACKS WITH', style: Guide.label()),

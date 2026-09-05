@@ -26,7 +26,7 @@ class Progress {
 typedef JsonMap = Map<String, dynamic>;
 
 class AppState extends ChangeNotifier {
-  AppState({required this.hostBase});
+  AppState({required this.hostBase}) { _loadSettings(); }
   final String hostBase;
   final paths = AppPaths.resolve();
   late final Downloader dl = Downloader(hostBase);
@@ -44,6 +44,8 @@ class AppState extends ChangeNotifier {
   String? gameRoot;
   bool gameRunning = false;
   bool modInstalled = false;
+  bool dark = false; // the night edition of the guide
+  final Map<String, List<String>> _anims = {};
   int backups = 0;
   int placed = 0;
   Progress? setupProgress;
@@ -203,24 +205,60 @@ class AppState extends ChangeNotifier {
   }
 
   /// Adds a Brave Exvius unit: downloads its sprite pack from the host when the engine lacks it, then asks the engine.
-  Future<JsonMap> addUnit(String ffbeId, String form, String name, {void Function(String)? onStep}) async {
+  /// The face icon of a unit form on the host (every unit has one there, before any sprite download).
+  String hostIconUrl(String form) => '${hostBase.endsWith('/') ? hostBase : '$hostBase/'}ffbe/icons/$form.png';
+
+  /// Makes sure a form's sprite pack is on this machine: downloads it from its shard and lets the engine index it.
+  Future<void> ensureSprites(String form, {void Function(String)? onStep}) async {
     final spriteDir = p.join(paths.engineSprites, form);
-    if (!Directory(spriteDir).existsSync()) {
-      final forms = (hostIndex?['forms'] as JsonMap?) ?? {};
-      final info = forms[form] as JsonMap?;
-      if (info == null) throw StateError('no sprite pack for form $form is available on the host yet');
-      onStep?.call('downloading the sprites');
-      final f = await dl.download(info['url'] as String, p.join(paths.downloads, '$form.zip'), sha256: info['sha256'] as String?);
-      await Downloader.unzip(f, spriteDir);
-      onStep?.call('indexing');
-      await api!.rebuildFfbeIndex();
-    }
+    if (Directory(spriteDir).existsSync() && File(p.join(spriteDir, 'unit_anime_$form.png')).existsSync()) return;
+    final forms = (hostIndex?['forms'] as JsonMap?) ?? {};
+    final info = forms[form] as JsonMap?;
+    if (info == null) throw StateError('no sprite pack for form $form is available on the host yet');
+    onStep?.call('downloading the sprites');
+    final f = await dl.download(info['url'] as String, p.join(paths.downloads, '$form.zip'), sha256: info['sha256'] as String?);
+    await Downloader.unzip(f, spriteDir);
+    onStep?.call('indexing');
+    await api!.rebuildFfbeIndex();
+    _anims.remove(form);
+  }
+
+  /// Animation names for a form, from the engine, cached.
+  Future<List<String>> animsFor(String form) async {
+    final c = _anims[form];
+    if (c != null) return c;
+    final a = await api!.anims(form);
+    _anims[form] = a;
+    return a;
+  }
+
+  Future<JsonMap> addUnit(String ffbeId, String form, String name, {void Function(String)? onStep}) async {
+    await ensureSprites(form, onStep: onStep);
     onStep?.call('adding to the mod');
     final u = await api!.addUnit(ffbeId, form: form, name: name);
     units = await api!.spec();
     selectedKey = u['key'] as String?;
     notifyListeners();
     return u;
+  }
+
+  // ---------------------------------------------------------------- settings
+  void _loadSettings() {
+    try {
+      final f = File(paths.settingsFile);
+      if (f.existsSync()) { final j = json.decode(f.readAsStringSync()) as Map; dark = j['dark'] == true; }
+    } catch (_) {}
+  }
+
+  /// One-line message in the header for a few seconds.
+  void showNotice(String s) {
+    notice = s; notifyListeners();
+    Future.delayed(const Duration(seconds: 6), () { if (notice == s) { notice = null; notifyListeners(); } });
+  }
+
+  void setDark(bool v) {
+    dark = v; notifyListeners();
+    try { File(paths.settingsFile).writeAsStringSync(json.encode({'dark': dark})); } catch (_) {}
   }
 
   // ---------------------------------------------------------------- build / install

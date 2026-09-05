@@ -92,13 +92,13 @@ class TierMenu extends StatelessWidget {
   Widget build(BuildContext context) => PopupMenuButton<int>(
         tooltip: 'Add to a tier',
         color: Guide.paper,
-        shape: const Border.fromBorderSide(BorderSide(color: Guide.ink, width: 1.5)),
+        shape: Border.fromBorderSide(BorderSide(color: Guide.ink, width: 1.5)),
         onSelected: onPick,
         itemBuilder: (_) => [for (var t = 0; t < 4; t++) PopupMenuItem(value: t, height: 32, child: Text('Tier ${t + 1}', style: Guide.text()))],
         child: Container(
           decoration: BoxDecoration(border: Border.all(color: Guide.ink, width: 1.5)),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [Text(label, style: Guide.small(Guide.ink)), const Icon(Icons.arrow_drop_down, size: 16, color: Guide.ink)]),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [Text(label, style: Guide.small(Guide.ink)), Icon(Icons.arrow_drop_down, size: 16, color: Guide.ink)]),
         ),
       );
 }
@@ -114,7 +114,7 @@ class GrantTools extends StatelessWidget {
         PopupMenuButton<int>(
           tooltip: 'Learned at',
           color: Guide.paper,
-          shape: const Border.fromBorderSide(BorderSide(color: Guide.ink, width: 1.5)),
+          shape: Border.fromBorderSide(BorderSide(color: Guide.ink, width: 1.5)),
           onSelected: onMove,
           itemBuilder: (_) => [for (var t = 0; t < 4; t++) PopupMenuItem(value: t, height: 32, enabled: t != tier, child: Text('Tier ${t + 1}', style: Guide.text(t == tier ? Guide.inkFaint : Guide.ink)))],
           child: Padding(padding: const EdgeInsets.symmetric(horizontal: 6), child: Text('tier ${tier + 1} ▾', style: Guide.small(Guide.blue))),

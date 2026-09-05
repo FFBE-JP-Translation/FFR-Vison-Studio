@@ -5,6 +5,7 @@ import '../../design/theme.dart';
 import '../../design/widgets.dart';
 import '../../state/app_state.dart';
 import '../../state/catalog_helpers.dart';
+import '../unit_anim_pane.dart';
 
 /// Step 4: one of the demo's Resonance animations plus one existing Resonance's mechanics.
 class ResonanceStep extends StatefulWidget {
@@ -16,8 +17,6 @@ class ResonanceStep extends StatefulWidget {
 }
 
 class _ResonanceStepState extends State<ResonanceStep> {
-  Map<String, dynamic>? seq;
-  num? seqFor;
   bool _described = false;
 
   @override
@@ -33,12 +32,6 @@ class _ResonanceStepState extends State<ResonanceStep> {
       'desc': '', 'descAuto': true, 'set': {'element': 'None'},
       'sequence_edits': {'master': [{'match': {'EventType': 'OtherChangeSubSpaceColor'}, 'set': {'Other_ChangeSubSpaceColor_Color': {'R': 0.25, 'G': 0.25, 'B': 0.35, 'A': 1.0}}}]}, 'effect_swaps': [],
     }});
-  }
-
-  Future<void> _loadSeq(AppState app, num id) async {
-    if (seqFor == id) return;
-    seqFor = id; seq = null;
-    try { final s = await app.api!.get('/api/seq/$id') as Map<String, dynamic>; if (mounted && seqFor == id) setState(() => seq = s); } catch (_) { if (mounted) setState(() => seq = {'error': true}); }
   }
 
   @override
@@ -62,7 +55,6 @@ class _ResonanceStepState extends State<ResonanceStep> {
     final element = (st['element'] ?? mech['element'] ?? 'None').toString();
     final physical = (st['DamageType'] ?? mech['dmgType']) == 'Physic';
     final vis = (lb['visuals'] ?? lb['from']) as num;
-    _loadSeq(app, vis);
 
     String autoDesc(Map<String, dynamic>? from, Map<String, dynamic> s) {
       final base = describe(from, s);
@@ -102,7 +94,6 @@ class _ResonanceStepState extends State<ResonanceStep> {
       if (same != null) setMech(same['id'] as num);
     }
     final pool = kind == 'damage' ? damaging.where((s) => (s['dmgType'] == 'Physic') == physical).toList() : kind == 'heal' ? healing : kind == 'buff' ? buffing : debuffing;
-    final ffbeLb = null; // Brave Exvius limit-burst text is shown in Advanced; here the choice is the game's own
 
     Widget row(String label, Widget child) => Padding(padding: const EdgeInsets.symmetric(vertical: 5), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [SizedBox(width: 110, child: Padding(padding: const EdgeInsets.only(top: 8), child: Text(label.toUpperCase(), style: Guide.label()))), Expanded(child: child)]));
     Widget radio<T>(T v, T g, String l, ValueChanged<T?> on) => Row(mainAxisSize: MainAxisSize.min, children: [Radio<T>(value: v, groupValue: g, onChanged: on), Text(l, style: Guide.text()), const SizedBox(width: 10)]);
@@ -112,7 +103,7 @@ class _ResonanceStepState extends State<ResonanceStep> {
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            const Band('Resonance', color: Guide.gold),
+            Band('Resonance', color: Guide.gold),
             Box(
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 row('Name', TextFormField(key: ValueKey('lbname-${widget.unit['key']}'), initialValue: (lb['en'] ?? '').toString(), onChanged: (v) => upd({'en': v}))),
@@ -163,7 +154,6 @@ class _ResonanceStepState extends State<ResonanceStep> {
                   TextFormField(key: ValueKey('lbdesc-${lb['desc']}-${lb['descAuto']}'), initialValue: (lb['desc'] ?? '').toString(), maxLines: 3, readOnly: lb['descAuto'] != false, onChanged: (v) => upd({'desc': v, 'descAuto': false})),
                   Row(mainAxisSize: MainAxisSize.min, children: [Checkbox(value: lb['descAuto'] != false, onChanged: (v) => upd({'descAuto': v == true})), Text('write it for me', style: Guide.small())]),
                 ])),
-                if (ffbeLb != null) const SizedBox.shrink(),
               ]),
             ),
           ]),
@@ -172,58 +162,14 @@ class _ResonanceStepState extends State<ResonanceStep> {
         SizedBox(
           width: 360,
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Band('What happens', color: Guide.ink, trailing: Text(templates.where((t) => t['id'] == vis).map(label).firstOrNull?.toUpperCase() ?? '', style: Guide.band(Guide.paper3).copyWith(fontSize: 11, letterSpacing: 0.6))),
-            Box(
-              padding: EdgeInsets.zero,
-              child: seq == null
-                  ? Padding(padding: const EdgeInsets.all(12), child: Text('reading the sequence', style: Guide.small()))
-                  : seq!['error'] == true
-                      ? Padding(padding: const EdgeInsets.all(12), child: Text('This animation has no battle sequence in the demo.', style: Guide.small(Guide.red)))
-                      : Column(children: [
-                          for (final (i, e) in ((seq!['events'] as List).cast<Map<String, dynamic>>()).indexed)
-                            if (_eventText(e) != null)
-                              Container(
-                                color: i.isOdd ? Guide.paper2 : Guide.paper,
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                  SizedBox(width: 48, child: Text(e['t'] != null ? '${(e['t'] as num).toStringAsFixed(2)}s' : '', style: Guide.num(Guide.inkSoft).copyWith(fontSize: 12))),
-                                  Container(width: 3, height: 16, color: _eventColor(e), margin: const EdgeInsets.only(right: 8, top: 2)),
-                                  Expanded(child: Text(_eventText(e)!, style: Guide.small(Guide.ink))),
-                                ]),
-                              ),
-                          Padding(padding: const EdgeInsets.all(10), child: Text('Effects and camera are described, not drawn: the game\'s particles cannot be shown here. Motions use this unit\'s own sprites in the game.', style: Guide.small())),
-                        ]),
-            ),
+            Band('Limit burst', color: Guide.gold, trailing: Text('BRAVE EXVIUS MOTION', style: Guide.band(Guide.ink).copyWith(fontSize: 11, letterSpacing: 0.6))),
+            const SizedBox(height: 8),
+            UnitAnimPane(unit: widget.unit, initial: 'limitatk', height: 280),
+            const SizedBox(height: 8),
+            Text("The unit's own limit-burst motion plays in the game inside the chosen Resonance sequence. The arrows show its other motions.", style: Guide.small()),
           ]),
         ),
       ]),
     );
-  }
-
-  String? _eventText(Map<String, dynamic> e) {
-    final t = e['type'] as String? ?? '';
-    if (t == 'UnitPlayAnimByName') return 'Unit plays ${e['Unit_PlayAnimByName_AnimationName']}';
-    if (t.startsWith('EffectSpawn')) return 'Effect ${(e['niagaraAsset'] ?? '').toString().replaceAll('import:', '').replaceAll(RegExp(r'^NS_EF_'), '')}';
-    if (t == 'OtherReaction') return 'Hit lands';
-    if (t == 'UnitMoveToTarget') return 'Unit dashes to the target';
-    if (t == 'UnitMoveToDefaultLocation' || t == 'UnitMoveToLocation') return 'Unit moves back';
-    if (t == 'PostSetColorGradingGlobalParameter') return 'Screen tint';
-    if (t == 'OtherChangeSubSpaceColor') return 'Domain colour';
-    if (t == 'BGChange') return 'Domain appears';
-    if (t == 'CameraShake') return 'Camera shake';
-    if (t == 'CameraSetZoomInOut') return 'Camera zoom';
-    if (t == 'UnitStartAfterimage') return 'Afterimage trail';
-    if (t == 'Sound') return '${e['voice'] == true ? 'Voice' : 'Sound'} ${e['cue'] ?? ''}';
-    return null;
-  }
-
-  Color _eventColor(Map<String, dynamic> e) {
-    final t = e['type'] as String? ?? '';
-    if (t.startsWith('Unit')) return Guide.blue;
-    if (t.startsWith('Effect')) return Guide.purple;
-    if (t == 'OtherReaction') return Guide.red;
-    if (t.startsWith('Post') || t.startsWith('Other') || t == 'BGChange') return Guide.gold;
-    if (t == 'Sound') return Guide.green;
-    return Guide.inkFaint;
   }
 }

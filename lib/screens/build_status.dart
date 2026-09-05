@@ -47,7 +47,7 @@ class _BuildStatusState extends State<BuildStatus> {
               height: 220,
               color: Guide.ink,
               padding: const EdgeInsets.all(10),
-              child: SingleChildScrollView(controller: _scroll, child: Text(log.join('\n'), style: Guide.mono(Guide.paper2))),
+              child: SingleChildScrollView(controller: _scroll, child: Text(log.join('\n'), style: Guide.mono(Guide.consoleFg))),
             ),
           ],
         ]),
