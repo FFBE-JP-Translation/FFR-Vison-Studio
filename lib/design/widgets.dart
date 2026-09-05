@@ -159,7 +159,7 @@ class StatRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         child: Row(children: [
           Expanded(child: Text(label, style: Guide.text())),
-          Text(value, style: Guide.num()),
+          Flexible(child: Text(value, style: Guide.num(), textAlign: TextAlign.right, maxLines: 1, overflow: TextOverflow.ellipsis)),
           if (trailing != null) ...[const SizedBox(width: 8), trailing!],
         ]),
       );
