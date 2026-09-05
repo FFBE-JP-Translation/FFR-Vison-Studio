@@ -52,6 +52,8 @@ class Api {
   String ffbeIcon(String form) => '$base/api/ffbe/icon/$form';
   String ffbePreview(String form, String anim) => '$base/api/ffbe/preview/$form/$anim';
   String animUrl(String form, String anim) => '$base/api/ffbe/anim/$form/$anim.webp';
+  Future<double?> motionSeconds(String form, String anim) async => ((await get('/api/ffbe/motion/$form/$anim')) as Map)['seconds'] as double?;
+  Future<Map<String, dynamic>> seq(num id) async => (await get('/api/seq/$id')) as Map<String, dynamic>;
   Future<List<String>> anims(String form) async => (((await get('/api/ffbe/anims/$form')) as Map)['anims'] as List).map((e) => e.toString()).toList();
   String advancedUrl() => '$base/';
 }

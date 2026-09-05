@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../design/choice.dart';
 import '../../design/theme.dart';
 import '../../design/widgets.dart';
 import '../../state/app_state.dart';
@@ -18,11 +19,36 @@ class ResonanceStep extends StatefulWidget {
 
 class _ResonanceStepState extends State<ResonanceStep> {
   bool _described = false;
+  double? lbSeconds; // the unit's own limit-burst motion length
+  Map<String, dynamic>? beLb; // Brave Exvius limit burst: name, effects
+  bool showTimeline = false;
+  Map<String, dynamic>? seq;
+  num? seqFor;
 
   @override
   void initState() {
     super.initState();
     if (widget.unit['lb_custom'] == null) WidgetsBinding.instance.addPostFrameCallback((_) => _enable());
+    _loadUnitFacts();
+  }
+
+  Future<void> _loadUnitFacts() async {
+    final app = context.read<AppState>();
+    final ff = widget.unit['ffbe'] as Map?;
+    final form = ff?['id']?.toString();
+    if (form == null) return;
+    try { final s = await app.api!.motionSeconds(form, 'limitatk'); if (mounted) setState(() => lbSeconds = s); } catch (_) {}
+    try {
+      final d = await app.api!.ffbeUnit((ff?['base'] ?? form).toString());
+      final f = (d['forms'] as Map?)?[form] as Map?;
+      if (mounted) setState(() => beLb = (f?['limitburst'] as Map?)?.cast<String, dynamic>());
+    } catch (_) {}
+  }
+
+  Future<void> _loadSeq(AppState app, num id) async {
+    if (seqFor == id) return;
+    seqFor = id; seq = null;
+    try { final s = await app.api!.seq(id); if (mounted && seqFor == id) setState(() => seq = s); } catch (_) { if (mounted && seqFor == id) setState(() => seq = {'error': true}); }
   }
 
   void _enable() {
@@ -43,18 +69,25 @@ class _ResonanceStepState extends State<ResonanceStep> {
     final finish = (cat['skills'] as List).cast<Map<String, dynamic>>().where((s) => s['attr'] == 'FinishBlow').toList();
     final effById = {for (final e in (cat['effects'] as List).cast<Map<String, dynamic>>()) e['id'] as num: e};
     final templates = (cat['lbTemplates'] as List).cast<Map<String, dynamic>>();
+    final good = templates.where((t) => t['good'] == true).toList();
+    final others = templates.where((t) => t['good'] != true).toList();
     String label(Map<String, dynamic> s) { final o = ownerOf(cat, s['id'] as num); return "${o != null ? "$o's " : ''}${s['name']}"; }
     bool isDamage(Map<String, dynamic> s) => (s['dmgType'] == 'Physic' || s['dmgType'] == 'Magic') && (s['mag'] as num) > 0;
     final damaging = finish.where(isDamage).toList();
     final healing = finish.where((s) => s['dmgType'] == 'None' && s['relation'] == 'Friendlies' && s['effectType'] == 'DamageAndRecovery' && (s['mag'] as num) > 0).toList();
     final buffing = finish.where((s) => s['dmgType'] == 'None' && s['relation'] == 'Friendlies' && !healing.contains(s)).toList();
     final debuffing = finish.where((s) => s['relation'] == 'Enemies' && (s['effects'] as List).any((id) { final e = effById[id as num]; return e != null && ['ParameterVariation', 'AccuracyVariation'].contains(e['type']) && e['status'] != null && e['status'] != 'None'; })).toList();
+    final captions = finish.where((s) => (s['id'] as num) >= 440000 && (s['id'] as num) < 441000).toList()..sort((a, b) => label(a).compareTo(label(b)));
     final mech = finish.where((s) => s['id'] == lb['from']).firstOrNull ?? finish.first;
     final kind = isDamage(mech) ? 'damage' : healing.contains(mech) ? 'heal' : buffing.contains(mech) ? 'buff' : 'debuff';
     final st = Map<String, dynamic>.from((lb['set'] as Map?) ?? {});
     final element = (st['element'] ?? mech['element'] ?? 'None').toString();
     final physical = (st['DamageType'] ?? mech['dmgType']) == 'Physic';
     final vis = (lb['visuals'] ?? lb['from']) as num;
+    final tpl = templates.where((t) => t['id'] == vis).firstOrNull;
+    final window = (tpl?['window'] as num?)?.toDouble();
+    final stretched = lbSeconds != null && window != null && window > 0 && lbSeconds! > window;
+    if (showTimeline) _loadSeq(app, vis);
 
     String autoDesc(Map<String, dynamic>? from, Map<String, dynamic> s) {
       final base = describe(from, s);
@@ -96,7 +129,7 @@ class _ResonanceStepState extends State<ResonanceStep> {
     final pool = kind == 'damage' ? damaging.where((s) => (s['dmgType'] == 'Physic') == physical).toList() : kind == 'heal' ? healing : kind == 'buff' ? buffing : debuffing;
 
     Widget row(String label, Widget child) => Padding(padding: const EdgeInsets.symmetric(vertical: 5), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [SizedBox(width: 110, child: Padding(padding: const EdgeInsets.only(top: 8), child: Text(label.toUpperCase(), style: Guide.label()))), Expanded(child: child)]));
-    Widget radio<T>(T v, T g, String l, ValueChanged<T?> on) => Row(mainAxisSize: MainAxisSize.min, children: [Radio<T>(value: v, groupValue: g, onChanged: on), Text(l, style: Guide.text()), const SizedBox(width: 10)]);
+    String secs(num? s) => s == null ? '-' : '${s.toStringAsFixed(1)} s';
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -106,21 +139,48 @@ class _ResonanceStepState extends State<ResonanceStep> {
             Band('Resonance', color: Guide.gold),
             Box(
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                row('Name', TextFormField(key: ValueKey('lbname-${widget.unit['key']}'), initialValue: (lb['en'] ?? '').toString(), onChanged: (v) => upd({'en': v}))),
+                row('Name', Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  TextFormField(key: ValueKey('lbname-${widget.unit['key']}'), initialValue: (lb['en'] ?? '').toString(), onChanged: (v) => upd({'en': v})),
+                  if (beLb != null && (beLb!['name'] ?? '').toString().isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text('In Brave Exvius: ${beLb!['name']}. ${((beLb!['effects'] as List?) ?? []).take(3).join(' ')}', style: Guide.small(), maxLines: 3, overflow: TextOverflow.ellipsis),
+                  ],
+                ])),
                 row('Animation', Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   DropdownButtonFormField<num>(
-                    key: ValueKey('vis$vis'), initialValue: templates.any((t) => t['id'] == vis) ? vis : null,
-                    items: [for (final t in templates) DropdownMenuItem(value: t['id'] as num, child: Text(label(t), style: Guide.text()))],
+                    key: ValueKey('vis$vis'), initialValue: templates.any((t) => t['id'] == vis) ? vis : null, isExpanded: true,
+                    items: [
+                      for (final t in good) DropdownMenuItem(value: t['id'] as num, child: Text('${label(t)} · ${secs(t['length'])} · ${t['who']}', style: Guide.text(), overflow: TextOverflow.ellipsis)),
+                      if (others.isNotEmpty) DropdownMenuItem<num>(enabled: false, value: null, child: Text("THE OWNER'S CINEMATIC, NO LIMIT-BURST MOTION", style: Guide.label(Guide.inkFaint))),
+                      for (final t in others) DropdownMenuItem(value: t['id'] as num, child: Text('${label(t)} · ${secs(t['length'])} · ${t['who']}', style: Guide.text(Guide.inkSoft), overflow: TextOverflow.ellipsis)),
+                    ],
                     onChanged: (v) { if (v != null) upd({'visuals': v, 'effect_swaps': []}); },
                   ),
-                  const SizedBox(height: 4),
-                  Text("The Resonance animations the demo ships with a full battle sequence. The unit's own limit-burst motion and Tronn's domain are kept.", style: Guide.small()),
+                  const SizedBox(height: 6),
+                  if (tpl?['blurb'] != null) Text(tpl!['blurb'].toString(), style: Guide.small(Guide.ink)),
+                  if (tpl != null && tpl['good'] != true) ...[
+                    const SizedBox(height: 6),
+                    Box(fill: Guide.warn, child: Text("This one is the owner's cinematic: your unit's own limit-burst motion is not played. Hibernal Fury, Healing Wind and Resolute Bastion do play it.", style: Guide.small(Guide.ink))),
+                  ] else if (stretched) ...[
+                    const SizedBox(height: 6),
+                    Box(fill: Guide.warn, child: Text("This unit's limit-burst motion runs ${secs(lbSeconds)}; this animation leaves ${secs(window)} for it, so the timing after it is stretched to fit. Stretched timing has not been checked in the game yet; Hibernal Fury gives the most room.", style: Guide.small(Guide.ink))),
+                  ] else if (lbSeconds != null && window != null) ...[
+                    const SizedBox(height: 4),
+                    Text("The unit's limit-burst motion (${secs(lbSeconds)}) fits the ${secs(window)} this animation gives it.", style: Guide.small(Guide.green)),
+                  ],
+                  const SizedBox(height: 6),
+                  InkWell(
+                    onTap: () => setState(() => showTimeline = !showTimeline),
+                    child: Text(showTimeline ? 'Hide the timeline' : 'Show the timeline (motions, effects, hits, camera in order)', style: Guide.small(Guide.blue).copyWith(decoration: TextDecoration.underline, decorationColor: Guide.blue)),
+                  ),
+                  if (showTimeline) ...[const SizedBox(height: 6), _timeline()],
                 ])),
-                row('It is', Wrap(children: [
-                  for (final (k, l) in [('damage', 'a damaging ability'), ('heal', 'a healing ability'), ('buff', 'a buffing ability'), ('debuff', 'a debuffing ability')]) radio<String>(k, kind, l, (_) => setKind(k)),
-                ])),
+                row('It is', Choice<String>(
+                  options: const [('damage', 'a damaging ability'), ('heal', 'a healing ability'), ('buff', 'a buffing ability'), ('debuff', 'a debuffing ability')],
+                  value: kind, onChanged: setKind,
+                )),
                 if (kind == 'damage') ...[
-                  row('Damage', Row(children: [radio<bool>(true, physical, 'Physical', (_) => setDamageType(true)), radio<bool>(false, physical, 'Magical', (_) => setDamageType(false))])),
+                  row('Damage', Choice<bool>(options: const [(true, 'Physical'), (false, 'Magical')], value: physical, onChanged: setDamageType)),
                   row('Element', Wrap(spacing: 6, runSpacing: 6, children: [
                     for (final e in elements)
                       ChoiceChip(
@@ -150,6 +210,16 @@ class _ResonanceStepState extends State<ResonanceStep> {
                       Container(decoration: BoxDecoration(border: Border.all(color: Guide.gold, width: 1.5)), padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), child: Text(t, style: Guide.small(Guide.ink))),
                   ]),
                 ])),
+                row('Caption lines', Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  DropdownButtonFormField<num>(
+                    isExpanded: true,
+                    key: ValueKey('cap${lb['caption_from']}'), initialValue: captions.any((s) => s['id'] == lb['caption_from']) ? lb['caption_from'] as num : null,
+                    items: [for (final s in captions) DropdownMenuItem(value: s['id'] as num, child: Text("Wol's lines from ${label(s)}", style: Guide.text(), overflow: TextOverflow.ellipsis))],
+                    onChanged: (v) { if (v != null) upd({'caption_from': v}); },
+                  ),
+                  const SizedBox(height: 4),
+                  Text('The dialogue windows during the cinematic are the ones written for that Resonance; the demo has no others.', style: Guide.small()),
+                ])),
                 row('Description', Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   TextFormField(key: ValueKey('lbdesc-${lb['desc']}-${lb['descAuto']}'), initialValue: (lb['desc'] ?? '').toString(), maxLines: 3, readOnly: lb['descAuto'] != false, onChanged: (v) => upd({'desc': v, 'descAuto': false})),
                   Row(mainAxisSize: MainAxisSize.min, children: [Checkbox(value: lb['descAuto'] != false, onChanged: (v) => upd({'descAuto': v == true})), Text('write it for me', style: Guide.small())]),
@@ -166,10 +236,61 @@ class _ResonanceStepState extends State<ResonanceStep> {
             const SizedBox(height: 8),
             UnitAnimPane(unit: widget.unit, initial: 'limitatk', height: 280),
             const SizedBox(height: 8),
-            Text("The unit's own limit-burst motion plays in the game inside the chosen Resonance sequence. The arrows show its other motions.", style: Guide.small()),
+            Text(tpl?['good'] == true
+                ? "This motion plays in the game inside the chosen Resonance sequence${lbSeconds != null ? ' (${secs(lbSeconds)})' : ''}. The arrows show the unit's other motions."
+                : "With the chosen animation this motion is not played; the unit holds a cast pose while the owner's cinematic runs.", style: Guide.small()),
           ]),
         ),
       ]),
     );
+  }
+
+  Widget _timeline() {
+    if (seq == null) return Text('reading the sequence', style: Guide.small());
+    if (seq!['error'] == true) return Text('This animation has no battle sequence in the demo.', style: Guide.small(Guide.red));
+    final events = (seq!['events'] as List).cast<Map<String, dynamic>>().where((e) => _eventText(e) != null).toList();
+    return Box(
+      padding: EdgeInsets.zero,
+      child: Column(children: [
+        for (final (i, e) in events.indexed)
+          Container(
+            color: i.isOdd ? Guide.paper2 : Guide.paper,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              SizedBox(width: 48, child: Text(e['t'] != null ? '${(e['t'] as num).toStringAsFixed(2)}s' : '', style: Guide.num(Guide.inkSoft).copyWith(fontSize: 12))),
+              Container(width: 3, height: 14, color: _eventColor(e), margin: const EdgeInsets.only(right: 8, top: 2)),
+              Expanded(child: Text(_eventText(e)!, style: Guide.small(Guide.ink))),
+            ]),
+          ),
+        Padding(padding: const EdgeInsets.all(8), child: Text("Effects and camera are named, not drawn. Motions use this unit's own sprites in the game.", style: Guide.small())),
+      ]),
+    );
+  }
+
+  String? _eventText(Map<String, dynamic> e) {
+    final t = e['type'] as String? ?? '';
+    if (t == 'UnitPlayAnimByName') return 'Unit plays ${e['Unit_PlayAnimByName_AnimationName']}';
+    if (t.startsWith('EffectSpawn')) return 'Effect ${(e['niagaraAsset'] ?? '').toString().replaceAll('import:', '').replaceAll(RegExp(r'^NS_EF_'), '')}';
+    if (t == 'OtherReaction') return 'Hit lands';
+    if (t == 'UnitMoveToTarget') return 'Unit dashes to the target';
+    if (t == 'UnitMoveToDefaultLocation' || t == 'UnitMoveToLocation') return 'Unit moves back';
+    if (t == 'PostSetColorGradingGlobalParameter') return 'Screen tint';
+    if (t == 'OtherChangeSubSpaceColor') return 'Domain colour';
+    if (t == 'BGChange') return 'Domain appears';
+    if (t == 'CameraShake') return 'Camera shake';
+    if (t == 'CameraSetZoomInOut') return 'Camera zoom';
+    if (t == 'UnitStartAfterimage') return 'Afterimage trail';
+    if (t == 'Sound') return '${e['voice'] == true ? 'Voice' : 'Sound'} ${e['cue'] ?? ''}';
+    return null;
+  }
+
+  Color _eventColor(Map<String, dynamic> e) {
+    final t = e['type'] as String? ?? '';
+    if (t.startsWith('Unit')) return Guide.blue;
+    if (t.startsWith('Effect')) return Guide.purple;
+    if (t == 'OtherReaction') return Guide.red;
+    if (t.startsWith('Post') || t.startsWith('Other') || t == 'BGChange') return Guide.gold;
+    if (t == 'Sound') return Guide.green;
+    return Guide.inkFaint;
   }
 }

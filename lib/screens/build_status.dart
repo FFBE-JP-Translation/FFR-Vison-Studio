@@ -32,7 +32,10 @@ class _BuildStatusState extends State<BuildStatus> {
     WidgetsBinding.instance.addPostFrameCallback((_) { if (open && _scroll.hasClients) _scroll.jumpTo(_scroll.position.maxScrollExtent); });
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Band(running ? stage : ok ? 'Done' : failed ? 'Something went wrong' : 'Build', color: running ? Guide.blue : ok ? Guide.green : failed ? Guide.red : Guide.inkSoft,
-          trailing: TextButton(onPressed: () => setState(() => open = !open), child: Text(open ? 'HIDE CONSOLE' : 'CONSOLE', style: Guide.band().copyWith(fontSize: 12)))),
+          trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+            TextButton(onPressed: app.openLogs, child: Text('LOGS FOLDER', style: Guide.band().copyWith(fontSize: 12))),
+            TextButton(onPressed: () => setState(() => open = !open), child: Text(open ? 'HIDE CONSOLE' : 'CONSOLE', style: Guide.band().copyWith(fontSize: 12))),
+          ])),
       Box(
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           if (running) ...[

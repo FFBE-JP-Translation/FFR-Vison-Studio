@@ -13,30 +13,85 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'design/theme.dart';
 import 'design/theme_toggle.dart';
 import 'design/widgets.dart';
 import 'design/wordmark.dart';
+import 'screens/about_dialog.dart';
 import 'screens/home_screen.dart';
 import 'screens/setup_screen.dart';
 import 'screens/unit_screen.dart';
+import 'services/paths.dart';
 import 'state/app_state.dart';
+import 'version.dart';
 
 const hostBase = 'https://ffbe.luminest.io/';
+final navKey = GlobalKey<NavigatorState>();
+RandomAccessFile? _lock; // held for the app's lifetime: one studio per machine (they would share one units file)
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await windowManager.ensureInitialized();
-  await windowManager.waitUntilReadyToShow(WindowOptions(size: Size(1320, 860), minimumSize: Size(1100, 700), title: 'FFR Vision Studio', backgroundColor: Guide.desk), () async {
+  final alreadyRunning = !_acquireLock();
+  await windowManager.waitUntilReadyToShow(
+      WindowOptions(size: alreadyRunning ? const Size(520, 300) : const Size(1320, 860), minimumSize: alreadyRunning ? const Size(520, 300) : const Size(960, 600), title: 'FFR Vision Studio', backgroundColor: Guide.desk), () async {
     await windowManager.show();
     await windowManager.focus();
   });
+  if (alreadyRunning) {
+    runApp(const AlreadyRunningApp());
+    return;
+  }
   final state = AppState(hostBase: Platform.environment['FFR_STUDIO_HOST'] ?? hostBase);
   runApp(ChangeNotifierProvider.value(value: state, child: const StudioApp()));
   state.boot();
+}
+
+bool _acquireLock() {
+  try {
+    final root = AppPaths.resolve().root;
+    final f = File(p.join(root, 'app.lock')).openSync(mode: FileMode.write);
+    f.lockSync(FileLock.exclusive);
+    _lock = f;
+    return true;
+  } on FileSystemException {
+    return false;
+  } catch (_) {
+    return true; // if locking is not possible at all, do not refuse to start
+  }
+}
+
+/// Shown instead of a second studio.
+class AlreadyRunningApp extends StatelessWidget {
+  const AlreadyRunningApp({super.key});
+  @override
+  Widget build(BuildContext context) => MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: Guide.theme(),
+        home: Scaffold(
+          body: Center(
+            child: Paper(
+              width: 460,
+              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                const Band('Already open'),
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                    Text('FFR Vision Studio is already running on this machine. Two copies would edit the same units file, so this one closes.', style: Guide.text()),
+                    const SizedBox(height: 14),
+                    Row(children: [const Spacer(), GuideButton('Close', onPressed: () => exit(0))]),
+                  ]),
+                ),
+              ]),
+            ),
+          ),
+        ),
+      );
 }
 
 class StudioApp extends StatefulWidget {
@@ -46,15 +101,31 @@ class StudioApp extends StatefulWidget {
 }
 
 class _StudioAppState extends State<StudioApp> with WindowListener {
+  bool _closing = false;
   @override
   void initState() { super.initState(); windowManager.addListener(this); windowManager.setPreventClose(true); }
   @override
   void dispose() { windowManager.removeListener(this); super.dispose(); }
   @override
   void onWindowClose() async {
+    if (_closing) return;
     final app = context.read<AppState>();
-    await app.save();
-    await app.engine?.stop();
+    if (app.building) {
+      final ctx = navKey.currentContext;
+      final ok = ctx == null ? true : await showDialog<bool>(
+        context: ctx,
+        builder: (c) => AlertDialog(
+          backgroundColor: Guide.paper, shape: Border.fromBorderSide(Guide.frame),
+          title: Text('A build is running', style: Guide.h2()),
+          content: Text('Closing now stops the engine in the middle of writing the mod. If it was installing, the game folder keeps the previous files (there is a backup). Close anyway?', style: Guide.text()),
+          actions: [GuideButton('Keep building', onPressed: () => Navigator.pop(c, false)), GuideButton('Close anyway', danger: true, onPressed: () => Navigator.pop(c, true))],
+        ),
+      );
+      if (ok != true) return;
+    }
+    _closing = true;
+    await app.shutdown();
+    try { _lock?.unlockSync(); _lock?.closeSync(); } catch (_) {}
     await windowManager.destroy();
   }
   @override
@@ -63,6 +134,7 @@ class _StudioAppState extends State<StudioApp> with WindowListener {
     Guide.dark = app.dark; // every Guide colour reads this; the keyed subtree redraws the whole page on a switch
     return MaterialApp(
       title: 'FFR Vision Studio',
+      navigatorKey: navKey,
       debugShowCheckedModeBanner: false,
       theme: Guide.theme(),
       home: KeyedSubtree(key: ValueKey(app.dark), child: const Shell()),
@@ -70,7 +142,7 @@ class _StudioAppState extends State<StudioApp> with WindowListener {
   }
 }
 
-/// The desk with the spread on it. Header strip carries the title, the unit path and the save state.
+/// The desk with the spread on it. Header strip carries the title, the unit path, the save state, the version and the switch.
 class Shell extends StatelessWidget {
   const Shell({super.key});
   @override
@@ -94,10 +166,40 @@ class Shell extends StatelessWidget {
               child: Text(app.notice ?? (app.dirty ? 'saving' : 'saved'), key: ValueKey(app.notice ?? app.dirty), style: Guide.small(app.notice != null ? Guide.red : Guide.inkSoft)),
             ),
             const SizedBox(width: 16),
-            ConstrainedBox(constraints: const BoxConstraints(maxWidth: 380), child: Text(app.gameRoot ?? '', style: Guide.small(Guide.inkFaint), maxLines: 1, overflow: TextOverflow.ellipsis)),
+            if (app.updateAvailable != null) ...[
+              InkWell(
+                onTap: () => launchUrl(Uri.parse(app.downloadPage)),
+                child: Text('version ${app.updateAvailable} is out · download', style: Guide.small(Guide.blue).copyWith(decoration: TextDecoration.underline, decorationColor: Guide.blue)),
+              ),
+              const SizedBox(width: 16),
+            ],
+            InkWell(onTap: () => showAbout(context), child: Tooltip(message: 'About FFR Vision Studio', child: Text(appLabel, style: Guide.small(Guide.inkFaint)))),
             const SizedBox(width: 14),
             const ThemeToggle(),
           ]),
+          if (app.engineDown) ...[
+            const SizedBox(height: 10),
+            Container(
+              color: Guide.red,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(children: [
+                Expanded(child: Text('The engine stopped. Nothing is saved or built until it runs again; the log is in the logs folder.', style: Guide.text(Guide.onBand))),
+                GuideButton('Open logs', small: true, onPressed: app.openLogs),
+                const SizedBox(width: 8),
+                GuideButton('Restart the engine', small: true, icon: Icons.refresh, onPressed: app.restartEngine),
+              ]),
+            ),
+          ] else if (app.banner != null) ...[
+            const SizedBox(height: 10),
+            Container(
+              color: Guide.gold,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(children: [
+                Expanded(child: Text(app.banner!, style: Guide.text(Guide.onBandFor(Guide.gold)))),
+                if (app.banner!.contains('Download')) GuideButton('Download page', small: true, icon: Icons.open_in_new, onPressed: () => launchUrl(Uri.parse(app.downloadPage))),
+              ]),
+            ),
+          ],
           const SizedBox(height: 12),
           Expanded(child: Paper(child: AnimatedSwitcher(duration: Guide.fast, layoutBuilder: (current, previous) => Stack(fit: StackFit.expand, children: [...previous, if (current != null) current]), child: u == null ? const HomeScreen(key: ValueKey('home')) : UnitScreen(key: ValueKey(u['key']))))),
         ]),

@@ -52,7 +52,15 @@ class _UnitScreenState extends State<UnitScreen> {
                 ),
                 const SizedBox(height: 14),
                 Band('Resonance', color: Guide.gold),
-                Box(child: Text((u['lb_custom'] as Map?)?['desc']?.toString().isNotEmpty == true ? (u['lb_custom'] as Map)['desc'].toString() : 'Set in step 4.', style: Guide.small(Guide.ink))),
+                Box(child: Builder(builder: (_) {
+                  final lb = u['lb_custom'] as Map?;
+                  final tpl = (app.catalog?['lbTemplates'] as List?)?.cast<Map>().where((t) => t['id'] == (lb?['visuals'] ?? lb?['from'])).firstOrNull;
+                  final el = (lb?['set'] as Map?)?['element']?.toString();
+                  return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(lb?['desc']?.toString().isNotEmpty == true ? lb!['desc'].toString() : 'Set in step 4.', style: Guide.small(Guide.ink)),
+                    if (tpl != null) Padding(padding: const EdgeInsets.only(top: 4), child: Text('${tpl['name']}${el != null && el != 'None' ? ' · $el' : ''}${tpl['good'] == true ? '' : ' · no limit-burst motion'}', style: Guide.small(tpl['good'] == true ? Guide.inkSoft : Guide.red))),
+                  ]);
+                })),
                 const SizedBox(height: 14),
                 GuideButton('Play like a vision the game has', icon: Icons.content_copy, small: true, onPressed: () => showCopyVision(context, u, set)),
                 const SizedBox(height: 4),

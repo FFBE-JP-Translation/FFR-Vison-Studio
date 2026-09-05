@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../design/choice.dart';
 import '../../design/theme.dart';
 import '../../design/widgets.dart';
 import '../../state/app_state.dart';
@@ -79,10 +80,8 @@ class _StatsStepState extends State<StatsStep> {
             Box(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text('ATTACKS WITH', style: Guide.label()),
-                Row(children: [
-                  for (final (v, l) in [('Physic', 'Physical'), ('Magic', 'Magic')])
-                    Row(mainAxisSize: MainAxisSize.min, children: [Radio<String>(value: v, groupValue: u['attackType'] == 'Magic' ? 'Magic' : 'Physic', onChanged: (x) => widget.set({'attackType': x})), Text(l, style: Guide.text()), const SizedBox(width: 12)]),
-                ]),
+                const SizedBox(height: 4),
+                Choice<String>(options: const [('Physic', 'Physical'), ('Magic', 'Magic')], value: u['attackType'] == 'Magic' ? 'Magic' : 'Physic', onChanged: (x) => widget.set({'attackType': x})),
                 const SizedBox(height: 8),
                 Text('ROLES', style: Guide.label()),
                 for (final (v, l) in roles)

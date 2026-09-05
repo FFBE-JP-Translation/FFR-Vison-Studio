@@ -111,7 +111,7 @@ class _AddUnitDialogState extends State<AddUnitDialog> {
               child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                    TextField(autofocus: true, decoration: InputDecoration(hintText: 'Search by name', suffixText: '${list.length} units'), onChanged: (v) => setState(() => q = v)),
+                    TextField(autofocus: true, decoration: InputDecoration(hintText: 'Search by name', suffixText: '${list.length} units'), onChanged: (v) => setState(() => q = v), onSubmitted: (_) { if (shown.isNotEmpty) pick(shown.first); }),
                     const SizedBox(height: 8),
                     Expanded(
                       child: Box(

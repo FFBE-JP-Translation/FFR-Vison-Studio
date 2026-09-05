@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "io.luminest" "\0"
-            VALUE "FileDescription", "ffr_vision_studio" "\0"
+            VALUE "CompanyName", "FFR Vision Studio (fan project)" "\0"
+            VALUE "FileDescription", "FFR Vision Studio - Brave Exvius visions for the FINAL FANTASY RESONANCE demo" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "ffr_vision_studio" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 io.luminest. All rights reserved." "\0"
-            VALUE "OriginalFilename", "ffr_vision_studio.exe" "\0"
-            VALUE "ProductName", "ffr_vision_studio" "\0"
+            VALUE "InternalName", "FFR Vision Studio" "\0"
+            VALUE "LegalCopyright", "Fan project, not affiliated with Square Enix. FINAL FANTASY is a trademark of Square Enix Holdings Co., Ltd." "\0"
+            VALUE "OriginalFilename", "FFR Vision Studio.exe" "\0"
+            VALUE "ProductName", "FFR Vision Studio" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

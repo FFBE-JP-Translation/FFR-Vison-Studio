@@ -26,8 +26,11 @@ String describe(Map<String, dynamic>? row, [Map<String, dynamic> o = const {}]) 
   } else {
     s = '${row['name'] ?? 'Effect'} on $who';
   }
-  if (brk >= 9999) s += ', staggers instantly';
-  else if (brk >= 40) s += ', high break power';
+  if (brk >= 9999) {
+    s += ', staggers instantly';
+  } else if (brk >= 40) {
+    s += ', high break power';
+  }
   return '$s.';
 }
 

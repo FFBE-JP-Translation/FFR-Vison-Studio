@@ -10,6 +10,7 @@ import '../services/downloader.dart';
 import '../services/engine.dart';
 import '../services/game_locator.dart';
 import '../services/paths.dart';
+import '../version.dart';
 
 /// Where the app is in its life: bootstrapping (downloads + engine), first-run setup, or ready.
 enum Phase { boot, setup, ready, failed }
@@ -60,49 +61,80 @@ class AppState extends ChangeNotifier {
   JsonMap? buildState; // /api/build/log
   Timer? _buildTimer;
   Timer? _statusTimer;
-  String? notice; // one-line message for the footer
+  String? notice; // one-line message in the header for a few seconds
+  String? banner; // a standing message (offline, old app); shown until the situation changes
+  String? updateAvailable; // "1.0.0 build 5" when the host has a newer app
+  bool engineDown = false; // the engine process ended on its own
+  String? engineVersion;
+  bool _stopping = false;
 
   JsonMap? get selected => units.cast<JsonMap?>().firstWhere((u) => u?['key'] == selectedKey, orElse: () => null);
+  String get logsDir => p.join(paths.root, 'logs');
+  String get downloadPage => hostBase.endsWith('/') ? hostBase : '$hostBase/';
 
   // ---------------------------------------------------------------- boot
   Future<void> boot() async {
     try {
       // Find the game first so the folder is already filled in while the packs download.
       if (gameRoot == null) GameLocator.detect().then((g) { if (g != null && gameRoot == null) { gameRoot = g; notifyListeners(); } });
-      manifest = await dl.manifest();
-      final packs = manifest!['packs'] as JsonMap;
       final installed = _readInstalled();
-      Future<void> pack(int step, String name, String into) async {
-        final info = packs[name] as JsonMap?;
-        if (info == null) throw StateError('the host has no "$name" pack');
-        final s = bootSteps[step];
-        final ver = manifest!['version'];
-        if (installed[name] == ver && Directory(into).existsSync()) {
-          s.state = 'done'; s.detail = 'version $ver'; notifyListeners(); return;
+      final haveEngine = installed['engine'] != null && File(paths.engineExe).existsSync();
+      JsonMap? man;
+      String? why;
+      try { man = await dl.manifest(); } catch (e) { why = e.toString(); }
+
+      if (man == null) {
+        // Offline (or the host is down): run what is installed.
+        if (!haveEngine) throw StateError('Could not reach the download host ($why) and nothing is installed yet. Check the connection and try again.');
+        _markInstalled(installed);
+        banner = 'Could not reach the download host. Running the installed version; updates are checked next start.';
+      } else {
+        manifest = man;
+        final tag = man['version'].toString();
+        final minApp = (man['minApp'] ?? '').toString();
+        if (compareTags(tag, appTag) > 0 && (man['packs'] as JsonMap?)?['app'] != null) {
+          updateAvailable = man['displayVersion'] != null ? '${man['displayVersion']} build ${man['build']}' : tag;
         }
-        s.state = 'working'; notifyListeners();
-        final dest = p.join(paths.downloads, p.basename(info['url'] as String));
-        final f = await dl.download(info['url'] as String, dest, sha256: info['sha256'] as String?, onProgress: (got, total) {
-          s.fraction = total > 0 ? got / total : null;
-          s.detail = '${(got / 1048576).toStringAsFixed(0)} MB';
-          notifyListeners();
-        });
-        s.detail = 'unpacking'; s.fraction = null; notifyListeners();
-        await Downloader.unzip(f, into);
-        installed[name] = ver; _writeInstalled(installed);
-        s.state = 'done'; s.detail = 'version $ver'; notifyListeners();
+        final tooNew = minApp.isNotEmpty && compareTags(minApp, appTag) > 0;
+        if (tooNew) {
+          // The host's engine needs a newer app than this one. Keep what is installed rather than mixing versions.
+          if (!haveEngine) throw StateError('This copy of the app ($appLabel) is older than the packs on the host. Download the new app from $downloadPage.');
+          _markInstalled(installed);
+          banner = 'A newer version is on the host and needs the new app. Download it from the page; this copy keeps working as it is.';
+        } else {
+          final packs = man['packs'] as JsonMap;
+          Future<void> pack(int step, String name, String into) async {
+            final info = packs[name] as JsonMap?;
+            if (info == null) throw StateError('the host has no "$name" pack');
+            final s = bootSteps[step];
+            if (installed[name] == tag && Directory(into).existsSync()) {
+              s.state = 'done'; s.detail = 'version ${_pretty(tag)}'; notifyListeners(); return;
+            }
+            s.state = 'working'; notifyListeners();
+            final dest = p.join(paths.downloads, p.basename(info['url'] as String));
+            final f = await dl.download(info['url'] as String, dest, sha256: info['sha256'] as String?, onProgress: (got, total) {
+              s.fraction = total > 0 ? got / total : null;
+              s.detail = '${(got / 1048576).toStringAsFixed(0)} MB';
+              notifyListeners();
+            });
+            s.detail = 'unpacking'; s.fraction = null; notifyListeners();
+            await Downloader.unzip(f, into);
+            installed[name] = tag; _writeInstalled(installed);
+            s.state = 'done'; s.detail = 'version ${_pretty(tag)}'; notifyListeners();
+          }
+          await pack(0, 'engine', paths.engineDir);
+          await pack(1, 'base', paths.engineData);
+          await pack(2, 'tables', p.join(paths.engineData, 'ffbe'));
+        }
+        try {
+          hostIndex = await dl.json_('ffbe/index.json');
+          File(p.join(paths.root, 'ffbe_index_cache.json')).writeAsStringSync(json.encode(hostIndex));
+        } catch (_) {}
       }
-      await pack(0, 'engine', paths.engineDir);
-      await pack(1, 'base', paths.engineData);
-      await pack(2, 'tables', p.join(paths.engineData, 'ffbe'));
-      try { hostIndex = await dl.json_('ffbe/index.json'); } catch (_) {}
-      final s = bootSteps[3];
-      s.state = 'working'; notifyListeners();
-      engine = Engine(paths.engineExe);
-      await engine!.start();
-      api = Api(engine!.baseUrl);
-      s.state = 'done'; s.detail = 'port ${engine!.port}'; notifyListeners();
-      await refreshStatus();
+      if (hostIndex == null) {
+        try { hostIndex = json.decode(File(p.join(paths.root, 'ffbe_index_cache.json')).readAsStringSync()) as JsonMap; } catch (_) {}
+      }
+      await _startEngine(bootSteps[3]);
       gameRoot ??= await GameLocator.detect();
       final st = await api!.status();
       phase = (st['setupNeeded'] == true) ? Phase.setup : Phase.ready;
@@ -115,6 +147,50 @@ class AppState extends ChangeNotifier {
       phase = Phase.failed;
     }
     notifyListeners();
+  }
+
+  String _pretty(String tag) {
+    final parts = tag.split('.');
+    return parts.length == 4 ? '${parts.take(3).join('.')} build ${parts[3]}' : tag;
+  }
+
+  void _markInstalled(Map<String, dynamic> installed) {
+    for (final (i, name) in ['engine', 'base', 'tables'].indexed) {
+      bootSteps[i].state = 'done';
+      bootSteps[i].detail = 'installed ${_pretty(installed[name]?.toString() ?? '?')}';
+    }
+    notifyListeners();
+  }
+
+  Future<void> _startEngine(Progress s) async {
+    s.state = 'working'; s.detail = null; notifyListeners();
+    final day = DateTime.now().toIso8601String().substring(0, 10);
+    engine = Engine(
+      paths.engineExe,
+      logPath: p.join(logsDir, 'engine-$day.log'),
+      header: ['app $appLabel', 'host $hostBase', 'engine ${File(paths.engineExe).path}'],
+      onExit: (code) {
+        engineDown = true;
+        api = null;
+        notifyListeners();
+      },
+    );
+    await engine!.start();
+    api = Api(engine!.baseUrl);
+    engineDown = false;
+    s.state = 'done'; s.detail = 'port ${engine!.port}'; notifyListeners();
+    await refreshStatus();
+  }
+
+  /// After the engine stopped on its own: start it again and reload everything.
+  Future<void> restartEngine() async {
+    try {
+      await _startEngine(bootSteps[3]);
+      if (phase == Phase.ready) await loadAll();
+      showNotice('The engine is back.');
+    } catch (e) {
+      showNotice('The engine could not be restarted: $e');
+    }
   }
 
   Map<String, dynamic> _readInstalled() {
@@ -131,8 +207,17 @@ class AppState extends ChangeNotifier {
       backups = (st['backups'] as num?)?.toInt() ?? 0;
       placed = (st['placed'] as num?)?.toInt() ?? 0;
       gameRoot = (st['gameRoot'] as String?) ?? gameRoot;
+      engineVersion = st['engineVersion']?.toString();
       notifyListeners();
-    } catch (_) {}
+    } catch (_) {
+      if (engine != null && !engine!.running && !_stopping) { engineDown = true; notifyListeners(); }
+    }
+  }
+
+  /// Opens the folder with the engine logs in Explorer.
+  Future<void> openLogs() async {
+    Directory(logsDir).createSync(recursive: true);
+    try { await Process.start('explorer.exe', [logsDir]); } catch (_) {}
   }
 
   // ---------------------------------------------------------------- first-run setup
@@ -197,27 +282,37 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> removeUnit(String key) async {
-    await api!.deleteUnit(key);
-    units = await api!.spec();
-    if (selectedKey == key) selectedKey = null;
-    notifyListeners();
+  Future<bool> removeUnit(String key) async {
+    try {
+      await api!.deleteUnit(key);
+      units = await api!.spec();
+      if (selectedKey == key) selectedKey = null;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      showNotice('Could not remove the unit: $e');
+      return false;
+    }
   }
 
-  /// Adds a Brave Exvius unit: downloads its sprite pack from the host when the engine lacks it, then asks the engine.
   /// The face icon of a unit form on the host (every unit has one there, before any sprite download).
-  String hostIconUrl(String form) => '${hostBase.endsWith('/') ? hostBase : '$hostBase/'}ffbe/icons/$form.png';
+  String hostIconUrl(String form) => '${downloadPage}ffbe/icons/$form.png';
 
   /// Makes sure a form's sprite pack is on this machine: downloads it from its shard and lets the engine index it.
+  /// A pack counts as present only when its sheet, its parts file and the completion marker are all there.
   Future<void> ensureSprites(String form, {void Function(String)? onStep}) async {
     final spriteDir = p.join(paths.engineSprites, form);
-    if (Directory(spriteDir).existsSync() && File(p.join(spriteDir, 'unit_anime_$form.png')).existsSync()) return;
+    final complete = File(p.join(spriteDir, '.complete')).existsSync() ||
+        (File(p.join(spriteDir, 'unit_anime_$form.png')).existsSync() && File(p.join(spriteDir, 'unit_cgg_$form.csv')).existsSync());
+    if (complete) return;
     final forms = (hostIndex?['forms'] as JsonMap?) ?? {};
     final info = forms[form] as JsonMap?;
-    if (info == null) throw StateError('no sprite pack for form $form is available on the host yet');
+    if (info == null) throw StateError(banner != null && banner!.startsWith('Could not reach') ? 'the sprites for this look are not on this machine and the download host is unreachable' : 'no sprite pack for form $form is available on the host yet');
     onStep?.call('downloading the sprites');
     final f = await dl.download(info['url'] as String, p.join(paths.downloads, '$form.zip'), sha256: info['sha256'] as String?);
     await Downloader.unzip(f, spriteDir);
+    if (!File(p.join(spriteDir, 'unit_anime_$form.png')).existsSync()) throw StateError('the sprite pack for $form is incomplete');
+    File(p.join(spriteDir, '.complete')).writeAsStringSync(DateTime.now().toIso8601String());
     onStep?.call('indexing');
     await api!.rebuildFfbeIndex();
     _anims.remove(form);
@@ -269,7 +364,7 @@ class AppState extends ChangeNotifier {
     try {
       await api!.build(install: install);
     } catch (e) {
-      notice = e.toString(); notifyListeners(); return;
+      showNotice(e.toString()); return;
     }
     buildState = {'running': true, 'log': <String>[], 'stage': 'Starting'};
     notifyListeners();
@@ -286,10 +381,8 @@ class AppState extends ChangeNotifier {
   /// Removes what the studio placed in the game folder and puts back what was there before; or puts one backup back.
   Future<Map<String, dynamic>> restoreGame({String? backup}) async {
     final r = await api!.restoreGame(backup: backup);
-    notice = r['message']?.toString();
-    notifyListeners();
+    showNotice(r['message']?.toString() ?? 'Done.');
     await refreshStatus();
-    Future.delayed(const Duration(seconds: 6), () { if (notice == r['message']) { notice = null; notifyListeners(); } });
     return r;
   }
 
@@ -298,12 +391,20 @@ class AppState extends ChangeNotifier {
       final r = await api!.install();
       buildState = {'running': false, 'result': 'ok', 'log': buildState?['log'] ?? <String>[], 'stage': 'Done', 'message': r['message'], 'install': true};
       await refreshStatus();
-    } catch (e) { notice = e.toString(); }
+    } catch (e) { showNotice(e.toString()); }
     notifyListeners();
+  }
+
+  Future<void> shutdown() async {
+    _stopping = true;
+    _buildTimer?.cancel(); _statusTimer?.cancel(); _saveTimer?.cancel();
+    await save();
+    await engine?.stop();
   }
 
   @override
   void dispose() {
+    _stopping = true;
     _buildTimer?.cancel(); _statusTimer?.cancel(); _saveTimer?.cancel();
     engine?.stop();
     super.dispose();

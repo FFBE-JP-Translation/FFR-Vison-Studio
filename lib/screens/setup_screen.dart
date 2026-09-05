@@ -75,6 +75,7 @@ class _SetupScreenState extends State<SetupScreen> {
                   GoButton(preparing ? 'Preparing' : 'Prepare and continue', busy: preparing, onPressed: booted && gameOk && !preparing ? () => app.runSetup(_game.text) : null),
                   const SizedBox(width: 14),
                   Expanded(child: Text(booted && !gameOk ? 'Point at the folder that contains FFRS.exe.' : 'Takes about two minutes. The game can stay closed.', style: Guide.small())),
+                  GuideButton('Logs folder', small: true, icon: Icons.folder_open, onPressed: app.openLogs),
                 ]),
               ]),
             ),
