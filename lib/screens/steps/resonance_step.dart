@@ -162,7 +162,7 @@ class _ResonanceStepState extends State<ResonanceStep> {
         SizedBox(
           width: 360,
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Band('Limit burst', color: Guide.gold, trailing: Text('BRAVE EXVIUS MOTION', style: Guide.band(Guide.ink).copyWith(fontSize: 11, letterSpacing: 0.6))),
+            Band('Limit burst', color: Guide.gold, trailing: Text('BRAVE EXVIUS MOTION', style: Guide.band(Guide.onBandFor(Guide.gold)).copyWith(fontSize: 11, letterSpacing: 0.6))),
             const SizedBox(height: 8),
             UnitAnimPane(unit: widget.unit, initial: 'limitatk', height: 280),
             const SizedBox(height: 8),

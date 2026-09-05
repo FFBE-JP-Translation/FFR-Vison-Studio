@@ -31,7 +31,7 @@ class _TiersState extends State<Tiers> {
   Widget build(BuildContext context) {
     final aw = awakening(widget.unit);
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Band('Learned by awakening tier', color: Guide.ink, trailing: Text(widget.hint.toUpperCase(), style: Guide.band(Guide.paper3).copyWith(fontSize: 11, letterSpacing: 0.6))),
+      Band('Learned by awakening tier', color: Guide.ink, trailing: Text(widget.hint.toUpperCase(), style: Guide.band(Guide.onBandFor(Guide.ink).withValues(alpha: 0.8)).copyWith(fontSize: 11, letterSpacing: 0.6))),
       Expanded(
         child: ListView(
           padding: const EdgeInsets.all(12),

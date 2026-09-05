@@ -48,6 +48,8 @@ class Guide {
   static Color get purple => _p.purple; // magic
   /// Text on a band or on the GO button: always white, whatever the paper is.
   static const onBand = Color(0xFFFFFFFF);
+  /// Text on a band of colour `c`: white on a saturated band, ink-black on a light one (the night edition's ink band).
+  static Color onBandFor(Color c) => c.computeLuminance() > 0.6 ? const Color(0xFF121212) : onBand;
 
   static const elements = <String, Color>{
     'Fire': Color(0xFFE4572E), 'Ice': Color(0xFF4FB3E8), 'Wind': Color(0xFF4CAF50), 'Earth': Color(0xFFA0743A),

@@ -24,7 +24,7 @@ class Band extends StatelessWidget {
           ),
           const SizedBox(width: 10),
         ],
-        Expanded(child: Text(title.toUpperCase(), style: Guide.band())),
+        Expanded(child: Text(title.toUpperCase(), style: Guide.band(Guide.onBandFor(color)))),
         if (trailing != null) trailing!,
       ]),
     );
