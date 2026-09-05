@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../design/theme.dart';
 import '../design/widgets.dart';
+import '../design/wordmark.dart';
 import '../services/game_locator.dart';
 import '../state/app_state.dart';
 
@@ -35,11 +36,7 @@ class _SetupScreenState extends State<SetupScreen> {
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(28, 26, 28, 10),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                Text('FFR VISION STUDIO', style: Guide.h1()),
-                const SizedBox(width: 14),
-                Padding(padding: const EdgeInsets.only(bottom: 4), child: Text('Brave Exvius units in FINAL FANTASY RESONANCE', style: Guide.small())),
-              ]),
+              child: const Wordmark(size: 44),
             ),
             const Band('Before you start'),
             Padding(

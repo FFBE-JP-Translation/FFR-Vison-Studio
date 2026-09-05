@@ -44,6 +44,8 @@ class AppState extends ChangeNotifier {
   String? gameRoot;
   bool gameRunning = false;
   bool modInstalled = false;
+  int backups = 0;
+  int placed = 0;
   Progress? setupProgress;
   final setupLog = <String>[];
 
@@ -124,6 +126,8 @@ class AppState extends ChangeNotifier {
       final st = await api!.status();
       gameRunning = st['gameRunning'] == true;
       modInstalled = st['modInstalled'] == true;
+      backups = (st['backups'] as num?)?.toInt() ?? 0;
+      placed = (st['placed'] as num?)?.toInt() ?? 0;
       gameRoot = (st['gameRoot'] as String?) ?? gameRoot;
       notifyListeners();
     } catch (_) {}
@@ -239,6 +243,16 @@ class AppState extends ChangeNotifier {
       } catch (_) {}
       notifyListeners();
     });
+  }
+
+  /// Removes what the studio placed in the game folder and puts back what was there before; or puts one backup back.
+  Future<Map<String, dynamic>> restoreGame({String? backup}) async {
+    final r = await api!.restoreGame(backup: backup);
+    notice = r['message']?.toString();
+    notifyListeners();
+    await refreshStatus();
+    Future.delayed(const Duration(seconds: 6), () { if (notice == r['message']) { notice = null; notifyListeners(); } });
+    return r;
   }
 
   Future<void> installLast() async {

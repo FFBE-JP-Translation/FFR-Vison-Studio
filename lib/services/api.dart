@@ -44,6 +44,8 @@ class Api {
   Future<void> build({required bool install}) => post('/api/build', {'install': install});
   Future<Map<String, dynamic>> buildLog() async => (await get('/api/build/log')) as Map<String, dynamic>;
   Future<Map<String, dynamic>> install() async => (await post('/api/install')) as Map<String, dynamic>;
+  Future<Map<String, dynamic>> gameFiles() async => (await get('/api/game/files')) as Map<String, dynamic>;
+  Future<Map<String, dynamic>> restoreGame({String? backup}) async => (await post('/api/game/restore', backup == null ? {} : {'backup': backup})) as Map<String, dynamic>;
 
   String iconUrl(String png) => '$base/api/ffr/icon/$png';
   String unitIcon(String key, String kind) => '$base/api/spec/$key/icon/$kind';

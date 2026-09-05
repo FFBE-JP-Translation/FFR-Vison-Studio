@@ -65,6 +65,21 @@ class HomeScreen extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text('Advanced opens the full studio in your browser: Brave Exvius kit imports, sprite settings, animation edits. It works on the same units.', style: Guide.small()),
                 if (app.buildState != null) ...[const SizedBox(height: 18), const BuildStatus()],
+                const SizedBox(height: 22),
+                const Band('Your game files', color: Guide.ink),
+                Box(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(app.modInstalled
+                        ? 'The mod is three files in FFRS/Content/Paks/~mods. Before each install the previous files are backed up; the game\'s own files are never touched.'
+                        : 'Nothing of the studio\'s is in the game folder right now. Installing adds three files to FFRS/Content/Paks/~mods; the game\'s own files are never touched.', style: Guide.text()),
+                    const SizedBox(height: 10),
+                    Row(children: [
+                      GuideButton('Restore the original game', icon: Icons.history, danger: true, onPressed: app.gameRunning || app.building || app.api == null ? null : () => showRestoreDialog(context)),
+                      const SizedBox(width: 12),
+                      Text(app.backups == 0 ? 'no backups yet' : '${app.backups} backup${app.backups == 1 ? '' : 's'} kept', style: Guide.small()),
+                    ]),
+                  ]),
+                ),
               ]),
             ),
           ),
@@ -126,3 +141,97 @@ class HomeScreen extends StatelessWidget {
     );
   }
 }
+
+/// Restore: shows exactly what will be removed and what comes back, then does it. A backup can also be put back one by one.
+Future<void> showRestoreDialog(BuildContext context) async {
+  final app = context.read<AppState>();
+  Map<String, dynamic>? files;
+  String? err;
+  try { files = await app.api!.gameFiles(); } catch (e) { err = e.toString(); }
+  if (!context.mounted) return;
+  final present = ((files?['present'] as List?) ?? []).cast<Map<String, dynamic>>();
+  final backups = ((files?['backups'] as List?) ?? []).cast<Map<String, dynamic>>();
+  final ours = present.where((f) => f['ours'] == true).toList();
+  final foreign = present.where((f) => f['ours'] != true).toList();
+  final original = ((files?['record'] as Map?)?['original'] as Map?) ?? {};
+  await showDialog<void>(
+    context: context,
+    builder: (c) => Dialog(
+      backgroundColor: Guide.paper,
+      shape: const Border.fromBorderSide(Guide.frame),
+      child: SizedBox(
+        width: 640,
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const Band('Restore the original game', color: Guide.ink),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+              if (err != null) Text(err, style: Guide.text(Guide.red))
+              else ...[
+                Text(ours.isEmpty ? 'Nothing of the studio\'s is in the game folder. There is nothing to remove.' : 'These files are removed from the game folder:', style: Guide.text()),
+                if (ours.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Box(padding: EdgeInsets.zero, child: Column(children: [for (var i = 0; i < ours.length; i++) StatRow(ours[i]['path'].toString(), _mb(ours[i]['size']), zebra: i.isOdd)])),
+                ],
+                if (original.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text('These files were there before the studio and are put back:', style: Guide.text()),
+                  const SizedBox(height: 6),
+                  for (final k in original.keys) Text(k.toString(), style: Guide.small(Guide.ink)),
+                ],
+                if (foreign.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text('Other mods in the same folder stay as they are: ${foreign.map((f) => f['path'].toString().split('/').last).join(', ')}.', style: Guide.small()),
+                ],
+                const SizedBox(height: 10),
+                Text('The game\'s own files are never changed by the studio, so this brings the game back to the state Steam installed. Your units stay in the studio; installing again puts the mod back.', style: Guide.small()),
+                if (backups.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  Text('BACKUPS', style: Guide.label()),
+                  const SizedBox(height: 4),
+                  Text('Each install keeps the files it replaced. Put one back to return to that earlier install.', style: Guide.small()),
+                  const SizedBox(height: 6),
+                  Box(
+                    padding: EdgeInsets.zero,
+                    child: Column(children: [
+                      for (var i = backups.length - 1; i >= 0 && i >= backups.length - 6; i--)
+                        Container(
+                          color: (backups.length - 1 - i).isOdd ? Guide.paper2 : Guide.paper,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          child: Row(children: [
+                            Expanded(child: Text(_stamp(backups[i]['id'].toString()), style: Guide.strong())),
+                            Text('${(backups[i]['files'] as List).length} files · ${_mb(backups[i]['size'])}', style: Guide.small()),
+                            const SizedBox(width: 10),
+                            GuideButton('Put back', small: true, onPressed: () async {
+                              Navigator.pop(c);
+                              try { await app.restoreGame(backup: backups[i]['id'].toString()); } catch (e) { app.notice = e.toString(); app.notifyListeners(); }
+                            }),
+                          ]),
+                        ),
+                    ]),
+                  ),
+                ],
+              ],
+            ]),
+          ),
+          Container(height: 1, color: Guide.hairline),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
+            child: Row(children: [
+              const Spacer(),
+              GuideButton('Keep the mod', onPressed: () => Navigator.pop(c)),
+              const SizedBox(width: 8),
+              GuideButton('Restore the original game', icon: Icons.history, danger: true, onPressed: err != null ? null : () async {
+                Navigator.pop(c);
+                try { await app.restoreGame(); } catch (e) { app.notice = e.toString(); app.notifyListeners(); }
+              }),
+            ]),
+          ),
+        ]),
+      ),
+    ),
+  );
+}
+
+String _mb(dynamic size) { final n = (size as num?)?.toDouble() ?? 0; return n > 1e6 ? '${(n / 1e6).toStringAsFixed(n > 1e8 ? 0 : 1)} MB' : '${(n / 1e3).toStringAsFixed(0)} KB'; }
+String _stamp(String id) => id.length >= 15 ? '${id.substring(0, 4)}-${id.substring(4, 6)}-${id.substring(6, 8)} ${id.substring(9, 11)}:${id.substring(11, 13)}' : id;

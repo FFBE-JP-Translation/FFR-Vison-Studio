@@ -63,6 +63,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/fonts/OFL.txt
+    - assets/brand/
   fonts:
     - family: Barlow
       fonts:

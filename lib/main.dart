@@ -18,6 +18,7 @@ import 'package:window_manager/window_manager.dart';
 
 import 'design/theme.dart';
 import 'design/widgets.dart';
+import 'design/wordmark.dart';
 import 'screens/home_screen.dart';
 import 'screens/setup_screen.dart';
 import 'screens/unit_screen.dart';
@@ -77,10 +78,10 @@ class Shell extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(22, 18, 22, 22),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            InkWell(onTap: () => app.select(null), child: Text('FFR VISION STUDIO', style: Guide.h1())),
+            Wordmark(size: 34, onTap: () => app.select(null)),
             if (u != null) ...[
-              Padding(padding: const EdgeInsets.fromLTRB(10, 0, 10, 5), child: Text('/', style: Guide.h2(Guide.inkFaint))),
-              Padding(padding: const EdgeInsets.only(bottom: 5), child: Text((u['en'] ?? '').toString().toUpperCase(), style: Guide.h2())),
+              Padding(padding: const EdgeInsets.fromLTRB(12, 0, 12, 2), child: Text('/', style: Guide.h2(Guide.inkFaint))),
+              Padding(padding: const EdgeInsets.only(bottom: 2), child: Text((u['en'] ?? '').toString().toUpperCase(), style: Guide.h2())),
             ],
             const Spacer(),
             AnimatedSwitcher(
