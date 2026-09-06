@@ -1,6 +1,6 @@
 # DESIGN.md — FFR Vision Studio
 
-Design system for the Windows desktop app (`app/ffr_vision_studio`) and its download page (`tools/release/site/index.html`). Direction: **the strategy-guide spread** (see `app/ffr_vision_studio/lib/design/DIRECTION.md`). Mode: Operate for the app, Persuade for the download page.
+Design system for the FFR Vision Studio Windows app (this repository) and its download page. Direction: **the strategy-guide spread** (see `lib/design/DIRECTION.md`). Mode: Operate for the app, Persuade for the download page.
 
 ## Visual world
 

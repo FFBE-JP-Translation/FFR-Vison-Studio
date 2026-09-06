@@ -77,7 +77,7 @@ class _UnitScreenState extends State<UnitScreen> {
           Expanded(
             child: AnimatedSwitcher(
               duration: Guide.fast,
-              layoutBuilder: (current, previous) => Stack(fit: StackFit.expand, children: [...previous, if (current != null) current]),
+              layoutBuilder: (current, previous) => Stack(fit: StackFit.expand, children: [...previous, ?current]),
               child: switch (step) {
                 0 => AbilitiesStep(key: const ValueKey('a'), unit: u, set: set),
                 1 => BonusesStep(key: const ValueKey('b'), unit: u, set: set),

@@ -124,7 +124,7 @@ class _SetupScreenState extends State<SetupScreen> {
           if (d != null) {
             setState(() => _game.text = d);
           } else {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Steam does not list the game and no drive has it in steamapps\common. Browse to it.', style: Guide.text(Guide.paper)), backgroundColor: Guide.ink));
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r'Steam does not list the game and no drive has it in steamapps\common. Browse to it.', style: Guide.text(Guide.paper)), backgroundColor: Guide.ink));
           }
         }),
       ]);

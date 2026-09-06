@@ -1,4 +1,4 @@
-/// Stamped at release time by tools/release/build_host_pack.py --build-app (--dart-define). A developer build is build 0.
+/// Stamped by a numbered build (--dart-define APP_VERSION/APP_BUILD). A developer build is build 0.
 const appVersion = String.fromEnvironment('APP_VERSION', defaultValue: '1.0.0');
 const appBuild = String.fromEnvironment('APP_BUILD', defaultValue: '0');
 const appTag = '$appVersion.$appBuild';

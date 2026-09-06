@@ -17,8 +17,8 @@ needs them.
 - "Update now": the app downloads the new build, verifies it, stages it and restarts itself through a small PowerShell
   helper (started via `cmd /c start`, the one launch route that outlives the closing app); the download page remains the
   fallback, and read-only app folders are sent there.
-- Developer environment (`tools/release/devenv.py`): build a numbered pack, serve it locally, start the app from a scratch
-  app-data folder.
+- Developer environment (the script lives in the project repository): build a numbered pack, serve it locally, start the
+  app from a scratch app-data folder.
 
 ## 1.0.0 build 5 — 2026-09-06
 

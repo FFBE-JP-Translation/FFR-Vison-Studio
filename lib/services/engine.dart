@@ -40,7 +40,9 @@ class Engine {
         f.parent.createSync(recursive: true);
         _sink = f.openWrite(mode: FileMode.append);
         _sink!.writeln('----- ${DateTime.now().toIso8601String()} engine start');
-        for (final h in header) _sink!.writeln(h);
+        for (final h in header) {
+          _sink!.writeln(h);
+        }
       } catch (_) { _sink = null; }
     }
     final proc = await Process.start(exePath, ['--engine'], workingDirectory: File(exePath).parent.path, runInShell: false,
