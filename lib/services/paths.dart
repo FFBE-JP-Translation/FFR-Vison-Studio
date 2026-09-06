@@ -21,6 +21,7 @@ class AppPaths {
   String get engineDir => p.join(root, 'engine');
   String get engineExe => p.join(engineDir, 'FFR Vision Studio Engine.exe');
   String get downloads => p.join(root, 'downloads');
+  String get icons => p.join(root, 'icons');
   String get settingsFile => p.join(root, 'settings.json');
   String get installedManifest => p.join(root, 'installed.json');
   String get engineData => p.join(engineDir, 'data');

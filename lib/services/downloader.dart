@@ -14,29 +14,50 @@ class Downloader {
 
   Uri _u(String rel) => rel.startsWith('http') ? Uri.parse(rel) : Uri.parse(baseUrl.endsWith('/') ? '$baseUrl$rel' : '$baseUrl/$rel');
 
+  /// Statuses worth waiting out: the host's rate limit (429) and its hiccups (5xx). Other 4xx are final.
+  static bool transient(int status) => status == 429 || status == 408 || status >= 500;
+
+  /// How long to wait before the next try: the host's Retry-After when it says (capped), else 2, 4, 8 ... seconds.
+  static Duration backoff(int attempt, Map<String, String> headers) {
+    final ra = int.tryParse(headers['retry-after'] ?? '');
+    if (ra != null) return Duration(seconds: ra.clamp(1, 60));
+    return Duration(seconds: 2 << attempt);
+  }
+
+  Future<http.Response> _get(String rel, Duration timeout, {String label = ''}) async {
+    late http.Response r;
+    for (var attempt = 0; attempt < 4; attempt++) {
+      r = await http.get(_u(rel)).timeout(timeout);
+      if (r.statusCode == 200) return r;
+      if (!transient(r.statusCode)) break;
+      await Future<void>.delayed(backoff(attempt, r.headers));
+    }
+    throw HttpException('${label.isEmpty ? rel : label}: HTTP ${r.statusCode}${r.statusCode == 429 ? ' (the host is busy; try again in a minute)' : ''}');
+  }
+
   Future<Map<String, dynamic>> manifest() async {
-    final r = await http.get(_u('manifest.json?t=${DateTime.now().millisecondsSinceEpoch}')).timeout(const Duration(seconds: 20));
-    if (r.statusCode != 200) throw HttpException('manifest: HTTP ${r.statusCode}');
+    final r = await _get('manifest.json?t=${DateTime.now().millisecondsSinceEpoch}', const Duration(seconds: 20), label: 'manifest');
     return json.decode(r.body) as Map<String, dynamic>;
   }
 
   Future<Map<String, dynamic>> json_(String rel) async {
-    final r = await http.get(_u(rel)).timeout(const Duration(seconds: 60));
-    if (r.statusCode != 200) throw HttpException('$rel: HTTP ${r.statusCode}');
+    final r = await _get(rel, const Duration(seconds: 60));
     return json.decode(utf8.decode(r.bodyBytes)) as Map<String, dynamic>;
   }
 
-  /// Downloads `rel` to `dest`, reporting (received, total). Verifies sha256 when given. A broken connection is
-  /// retried up to four times and resumes where it stopped (`.part` file + Range request).
+  /// Downloads `rel` to `dest`, reporting (received, total). Verifies sha256 when given. A broken connection, a 429 or a
+  /// 5xx is retried (up to six tries, backing off) and resumes where it stopped (`.part` file + Range request).
   Future<File> download(String rel, String dest, {String? sha256, void Function(int, int)? onProgress}) async {
     final f = File(dest);
     if (f.existsSync() && sha256 != null && await _sha256(f) == sha256) return f;
     f.parent.createSync(recursive: true);
     final part = File('$dest.part');
     Object? last;
-    for (var attempt = 0; attempt < 4; attempt++) {
+    var wait = const Duration(seconds: 1);
+    for (var attempt = 0; attempt < 6; attempt++) {
       try {
-        await _fetch(rel, part, onProgress);
+        wait = Duration(seconds: 1 << attempt);
+        await _fetch(rel, part, onProgress, onWait: (d) => wait = d);
         if (f.existsSync()) f.deleteSync();
         part.renameSync(f.path);
         if (sha256 != null) {
@@ -50,17 +71,17 @@ class Downloader {
       } on FormatException {
         rethrow;
       } on HttpException catch (e) {
-        if (e.message.contains('HTTP 4')) rethrow; // a missing file will not appear by retrying
+        if (e.message.contains('HTTP 4') && !e.message.contains('HTTP 429') && !e.message.contains('HTTP 408')) rethrow; // a missing file will not appear by retrying
         last = e;
       } catch (e) {
         last = e;
       }
-      await Future<void>.delayed(Duration(seconds: 1 << attempt));
+      await Future<void>.delayed(wait);
     }
     throw HttpException('$rel: the download kept failing ($last)');
   }
 
-  Future<void> _fetch(String rel, File part, void Function(int, int)? onProgress) async {
+  Future<void> _fetch(String rel, File part, void Function(int, int)? onProgress, {void Function(Duration)? onWait}) async {
     final client = http.Client();
     try {
       var have = part.existsSync() ? part.lengthSync() : 0;
@@ -72,7 +93,8 @@ class Downloader {
       } else if (res.statusCode == 416) {
         return; // nothing left to fetch
       } else if (res.statusCode != 206) {
-        throw HttpException('$rel: HTTP ${res.statusCode}');
+        if (transient(res.statusCode)) onWait?.call(backoff(2, res.headers));
+        throw HttpException('$rel: HTTP ${res.statusCode}${res.statusCode == 429 ? ' (the host is busy)' : ''}');
       }
       final total = have + (res.contentLength ?? 0);
       final sink = part.openWrite(mode: have > 0 ? FileMode.append : FileMode.write);

@@ -4,6 +4,18 @@ FFR Vision Studio, the Windows app. The product is 1.0.0 while the first release
 build (`1.0.0.<build>` in file names, the manifest and the app's own version check). Engine changes are listed when the app
 needs them.
 
+## 1.0.0 build 7 — 2026-09-06
+
+- The host answered with 429 (too many requests) and 404s once many people used the app at the same time. The add-unit
+  dialog fetched one icon per row and one per look straight from the host, and the host only had one icon per unit.
+  The icons are now one pack (every look, about 4 MB) downloaded once at setup and read from disk; the pickers make no
+  host requests at all.
+- Downloads back off on 429 and 5xx (honouring Retry-After) instead of failing at once; a missing file still fails fast.
+- A pack that did not change between builds keeps its earlier version: this build reuses the build 6 engine (76 MB) and
+  data, so updating downloads the app and the icons only.
+- Update now: the helper is started through `cmd /c start`, the one route that outlives the closing app (the build 6
+  helper never ran).
+
 ## 1.0.0 build 6 — 2026-09-06
 
 - Limit-burst, magic and victory previews for Super Limit Break, Overdrive and every newer unit: the engine now finds

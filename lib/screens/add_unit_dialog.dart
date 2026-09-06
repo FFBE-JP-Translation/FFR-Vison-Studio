@@ -195,13 +195,14 @@ class _AddUnitDialogState extends State<AddUnitDialog> {
     );
   }
 
-  /// The face icon: from the host (every unit has one there), else from the engine (downloaded sprites).
-  Widget _icon(AppState app, String form) => Image.network(
-        app.hostIconUrl(form),
-        width: 44, height: 30, fit: BoxFit.cover, filterQuality: FilterQuality.none, gaplessPlayback: true,
-        errorBuilder: (c, e, s) => Image.network(app.api!.ffbeIcon(form), width: 44, height: 30, fit: BoxFit.cover, filterQuality: FilterQuality.none,
-            errorBuilder: (c, e, s) => Center(child: Text('?', style: Guide.small(Guide.inkFaint)))),
-      );
+  /// The face icon: from the icons pack on disk, else from the engine (downloaded sprites). Never from the host per row.
+  Widget _icon(AppState app, String form) {
+    final f = app.iconFile(form);
+    if (f.existsSync()) return Image.file(f, width: 44, height: 30, fit: BoxFit.cover, filterQuality: FilterQuality.none, gaplessPlayback: true);
+    if (app.api == null) return Center(child: Text('?', style: Guide.small(Guide.inkFaint)));
+    return Image.network(app.api!.ffbeIcon(form), width: 44, height: 30, fit: BoxFit.cover, filterQuality: FilterQuality.none, gaplessPlayback: true,
+        errorBuilder: (c, e, s) => Center(child: Text('?', style: Guide.small(Guide.inkFaint))));
+  }
 
   Widget _chip(String t, Color c) => Container(
         margin: const EdgeInsets.only(left: 6),

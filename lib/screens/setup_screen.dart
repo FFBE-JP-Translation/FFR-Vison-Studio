@@ -50,8 +50,8 @@ class _SetupScreenState extends State<SetupScreen> {
                   padding: EdgeInsets.zero,
                   child: Column(children: [
                     for (var i = 0; i < app.bootSteps.length; i++) _row(i + 1, app.bootSteps[i].label, StatusCell(_state(app.bootSteps[i].state), text: app.bootSteps[i].detail, progress: app.bootSteps[i].fraction), zebra: i.isOdd),
-                    _row(5, 'Find the game', _gameCell(app, gameOk), zebra: false, tall: true),
-                    _row(6, "Prepare the game's data", app.setupProgress == null
+                    _row(app.bootSteps.length + 1, 'Find the game', _gameCell(app, gameOk), zebra: false, tall: true),
+                    _row(app.bootSteps.length + 2, "Prepare the game's data", app.setupProgress == null
                         ? Text(booted && gameOk ? 'ready when you are' : 'waiting', style: Guide.small(Guide.inkFaint))
                         : StatusCell(_state(app.setupProgress!.state), text: app.setupProgress!.detail), zebra: true),
                   ]),

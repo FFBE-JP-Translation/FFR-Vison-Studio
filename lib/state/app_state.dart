@@ -40,6 +40,7 @@ class AppState extends ChangeNotifier {
     Progress('Download the engine'),
     Progress('Download the game-side data'),
     Progress('Download the Brave Exvius tables'),
+    Progress('Download the unit icons'),
     Progress('Start the engine'),
   ];
   String? gameRoot;
@@ -105,12 +106,18 @@ class AppState extends ChangeNotifier {
           banner = 'A newer version is on the host and needs the new app. Press Update now, or download it from the page; this copy keeps working as it is.';
         } else {
           final packs = man['packs'] as JsonMap;
-          Future<void> pack(int step, String name, String into) async {
+          // A pack carries its own version when its content is older than the manifest (it did not change in this build):
+          // what is installed under that version is kept, so a new build only downloads what actually changed.
+          Future<void> pack(int step, String name, String into, {bool optional = false}) async {
             final info = packs[name] as JsonMap?;
-            if (info == null) throw StateError('the host has no "$name" pack');
             final s = bootSteps[step];
-            if (installed[name] == tag && Directory(into).existsSync()) {
-              s.state = 'done'; s.detail = 'version ${_pretty(tag)}'; notifyListeners(); return;
+            if (info == null) {
+              if (optional) { s.state = 'done'; s.detail = 'not on this host'; notifyListeners(); return; }
+              throw StateError('the host has no "$name" pack');
+            }
+            final ptag = (info['version'] ?? tag).toString();
+            if (installed[name] == ptag && Directory(into).existsSync()) {
+              s.state = 'done'; s.detail = 'version ${_pretty(ptag)}'; notifyListeners(); return;
             }
             s.state = 'working'; notifyListeners();
             final dest = p.join(paths.downloads, p.basename(info['url'] as String));
@@ -121,12 +128,13 @@ class AppState extends ChangeNotifier {
             });
             s.detail = 'unpacking'; s.fraction = null; notifyListeners();
             await Downloader.unzip(f, into);
-            installed[name] = tag; _writeInstalled(installed);
-            s.state = 'done'; s.detail = 'version ${_pretty(tag)}'; notifyListeners();
+            installed[name] = ptag; _writeInstalled(installed);
+            s.state = 'done'; s.detail = 'version ${_pretty(ptag)}'; notifyListeners();
           }
           await pack(0, 'engine', paths.engineDir);
           await pack(1, 'base', paths.engineData);
           await pack(2, 'tables', p.join(paths.engineData, 'ffbe'));
+          await pack(3, 'icons', paths.icons, optional: true);
         }
         try {
           hostIndex = await dl.json_('ffbe/index.json');
@@ -136,7 +144,7 @@ class AppState extends ChangeNotifier {
       if (hostIndex == null) {
         try { hostIndex = json.decode(File(p.join(paths.root, 'ffbe_index_cache.json')).readAsStringSync()) as JsonMap; } catch (_) {}
       }
-      await _startEngine(bootSteps[3]);
+      await _startEngine(bootSteps[4]);
       gameRoot ??= await GameLocator.detect();
       final st = await api!.status();
       phase = (st['setupNeeded'] == true) ? Phase.setup : Phase.ready;
@@ -157,9 +165,9 @@ class AppState extends ChangeNotifier {
   }
 
   void _markInstalled(Map<String, dynamic> installed) {
-    for (final (i, name) in ['engine', 'base', 'tables'].indexed) {
+    for (final (i, name) in ['engine', 'base', 'tables', 'icons'].indexed) {
       bootSteps[i].state = 'done';
-      bootSteps[i].detail = 'installed ${_pretty(installed[name]?.toString() ?? '?')}';
+      bootSteps[i].detail = installed[name] == null ? (name == 'icons' ? 'not downloaded yet' : '?') : 'installed ${_pretty(installed[name].toString())}';
     }
     notifyListeners();
   }
@@ -188,7 +196,7 @@ class AppState extends ChangeNotifier {
   /// After the engine stopped on its own: start it again and reload everything.
   Future<void> restartEngine() async {
     try {
-      await _startEngine(bootSteps[3]);
+      await _startEngine(bootSteps[4]);
       if (phase == Phase.ready) await loadAll();
       showNotice('The engine is back.');
     } catch (e) {
@@ -298,8 +306,9 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  /// The face icon of a unit form on the host (every unit has one there, before any sprite download).
-  String hostIconUrl(String form) => '${downloadPage}ffbe/icons/$form.png';
+  /// The face icon of a unit form, from the icons pack on disk (one download at setup; nothing is fetched per row: the host
+  /// answered the old one-request-per-icon pickers with 429s once many people used the app at the same time).
+  File iconFile(String form) => File(p.join(paths.icons, '$form.png'));
 
   /// Makes sure a form's sprite pack is on this machine: downloads it from its shard and lets the engine index it.
   /// A pack counts as present only when its sheet, its parts file and the completion marker are all there.
