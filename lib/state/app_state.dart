@@ -168,6 +168,7 @@ class AppState extends ChangeNotifier {
     engine = Engine(
       paths.engineExe,
       logPath: p.join(logsDir, 'engine-$day.log'),
+      logDir: logsDir,
       header: ['app $appLabel', 'host $hostBase', 'engine ${File(paths.engineExe).path}'],
       onExit: (code) {
         engineDown = true;

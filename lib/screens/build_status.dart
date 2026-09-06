@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:provider/provider.dart';
 
 import '../design/theme.dart';
@@ -33,6 +34,7 @@ class _BuildStatusState extends State<BuildStatus> {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Band(running ? stage : ok ? 'Done' : failed ? 'Something went wrong' : 'Build', color: running ? Guide.blue : ok ? Guide.green : failed ? Guide.red : Guide.inkSoft,
           trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+            TextButton(onPressed: () async { await Clipboard.setData(ClipboardData(text: log.join('\n'))); app.showNotice('Console copied.'); }, child: Text('COPY', style: Guide.band().copyWith(fontSize: 12))),
             TextButton(onPressed: app.openLogs, child: Text('LOGS FOLDER', style: Guide.band().copyWith(fontSize: 12))),
             TextButton(onPressed: () => setState(() => open = !open), child: Text(open ? 'HIDE CONSOLE' : 'CONSOLE', style: Guide.band().copyWith(fontSize: 12))),
           ])),
@@ -50,7 +52,7 @@ class _BuildStatusState extends State<BuildStatus> {
               height: 220,
               color: Guide.ink,
               padding: const EdgeInsets.all(10),
-              child: SingleChildScrollView(controller: _scroll, child: Text(log.join('\n'), style: Guide.mono(Guide.consoleFg))),
+              child: SingleChildScrollView(controller: _scroll, child: SelectableText(log.join('\n'), style: Guide.mono(Guide.consoleFg))),
             ),
           ],
         ]),

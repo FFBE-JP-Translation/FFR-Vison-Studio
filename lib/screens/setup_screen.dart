@@ -1,5 +1,6 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:provider/provider.dart';
 
 import '../design/theme.dart';
@@ -67,8 +68,15 @@ class _SetupScreenState extends State<SetupScreen> {
                     height: 150,
                     decoration: BoxDecoration(color: Guide.consoleBg),
                     padding: const EdgeInsets.all(10),
-                    child: SingleChildScrollView(reverse: true, child: Text(app.setupLog.skip(app.setupLog.length > 60 ? app.setupLog.length - 60 : 0).join('\n'), style: Guide.mono(Guide.consoleFg))),
+                    child: SingleChildScrollView(reverse: true, child: SelectableText(app.setupLog.skip(app.setupLog.length > 60 ? app.setupLog.length - 60 : 0).join('\n'), style: Guide.mono(Guide.consoleFg))),
                   ),
+                  const SizedBox(height: 6),
+                  Row(children: [
+                    GuideButton('Copy the console', small: true, icon: Icons.copy, onPressed: () async {
+                      await Clipboard.setData(ClipboardData(text: app.setupLog.join('\n')));
+                      app.showNotice('Console copied.');
+                    }),
+                  ]),
                 ],
                 const SizedBox(height: 22),
                 Row(children: [

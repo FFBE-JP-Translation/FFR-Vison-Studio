@@ -9,9 +9,10 @@ import 'package:http/http.dart' as http;
 /// prints goes to `logPath` (one file per day) so a failure can be looked at afterwards; `onExit` fires when the
 /// process ends on its own (not through `stop`), so the app can offer a restart.
 class Engine {
-  Engine(this.exePath, {this.logPath, this.onExit, this.header = const []});
+  Engine(this.exePath, {this.logPath, this.logDir, this.onExit, this.header = const []});
   final String exePath;
   final String? logPath;
+  final String? logDir; // handed to the engine (FFR_LOG_DIR) so its own error and build logs land in the same folder
   final void Function(int code)? onExit;
   final List<String> header;
   Process? _proc;
@@ -42,7 +43,8 @@ class Engine {
         for (final h in header) _sink!.writeln(h);
       } catch (_) { _sink = null; }
     }
-    final proc = await Process.start(exePath, ['--engine'], workingDirectory: File(exePath).parent.path, runInShell: false);
+    final proc = await Process.start(exePath, ['--engine'], workingDirectory: File(exePath).parent.path, runInShell: false,
+        environment: logDir == null ? null : {'FFR_LOG_DIR': logDir!});
     _proc = proc;
     final ready = Completer<int>();
     proc.stdout.transform(utf8.decoder).transform(const LineSplitter()).listen((line) {
