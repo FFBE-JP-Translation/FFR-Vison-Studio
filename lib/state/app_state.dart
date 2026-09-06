@@ -364,16 +364,20 @@ class AppState extends ChangeNotifier {
       final src = inner.length == 1 ? inner.first.path : staging;
       if (!File(p.join(src, p.basename(exePath))).existsSync() && !File(p.join(src, 'FFR Vision Studio.exe')).existsSync()) throw StateError('the downloaded app has no executable');
       final newExe = File(p.join(src, p.basename(exePath))).existsSync() ? p.basename(exePath) : 'FFR Vision Studio.exe';
-      final cmd = File(p.join(paths.root, 'update.cmd'));
-      cmd.writeAsStringSync('@echo off\r\n'
-          ':wait\r\n'
-          'tasklist /FI "PID eq $pid" 2>NUL | find "$pid" >NUL && (timeout /t 1 /nobreak >NUL & goto wait)\r\n'
-          'robocopy "$src" "$exeDir" /E /IS /IT /NFL /NDL /NJH /NJS >NUL\r\n'
-          'rmdir /S /Q "$staging"\r\n'
-          'start "" "${p.join(exeDir, newExe)}"\r\n'
-          'del "%~f0"\r\n');
+      // The helper is a PowerShell script started detached: it waits for this process to end, copies the staged folder over
+      // the exe's folder, starts the new exe and removes itself. (A cmd script with `tasklist | find` hangs without a console.)
+      final ps1 = File(p.join(paths.root, 'update.ps1'));
+      ps1.writeAsStringSync([
+        r'$ErrorActionPreference = "SilentlyContinue"',
+        r'$t = 0',
+        'while ((Get-Process -Id $pid -ErrorAction SilentlyContinue) -and \$t -lt 120) { Start-Sleep -Seconds 1; \$t++ }',
+        'robocopy "$src" "$exeDir" /E /IS /IT /NFL /NDL /NJH /NJS | Out-Null',
+        'Remove-Item -Recurse -Force "$staging"',
+        'Start-Process -FilePath "${p.join(exeDir, newExe)}" -WorkingDirectory "$exeDir"',
+        r'Remove-Item -Force $MyInvocation.MyCommand.Path',
+      ].join('\r\n'));
       updateStep = 'restarting'; notifyListeners();
-      await Process.start('cmd.exe', ['/c', cmd.path], mode: ProcessStartMode.detached);
+      await Process.start('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', ps1.path], mode: ProcessStartMode.detached);
       await shutdown();
       exit(0);
     } catch (e) {
@@ -385,8 +389,7 @@ class AppState extends ChangeNotifier {
   /// After a self-update: drop the helper and say what happened, once.
   void _afterUpdate() {
     try {
-      final cmd = File(p.join(paths.root, 'update.cmd'));
-      if (cmd.existsSync()) cmd.deleteSync();
+      for (final n in ['update.cmd', 'update.ps1']) { final f = File(p.join(paths.root, n)); if (f.existsSync()) f.deleteSync(); }
       final st = Directory(p.join(paths.root, 'app-staging'));
       if (st.existsSync()) st.deleteSync(recursive: true);
       final f = File(paths.settingsFile);
