@@ -54,7 +54,8 @@ class _AddUnitDialogState extends State<AddUnitDialog> {
       final forms = (d['forms'] as Map?)?.keys.map((k) => k.toString()).toList() ?? [];
       final packs = ((u['packs'] as List?) ?? []).map((e) => e.toString()).toSet();
       final prefer = forms.where(packs.contains).toList();
-      final f = prefer.isNotEmpty ? prefer.last : (d['maxForm']?.toString() ?? u['id'] as String);
+      final plain = prefer.where((x) => ((d['forms'] as Map?)?[x] as Map?)?['shift'] == null).toList(); // the base look first; Brave Shift / SLB are a choice
+      final f = plain.isNotEmpty ? plain.last : prefer.isNotEmpty ? prefer.last : (d['maxForm']?.toString() ?? u['id'] as String);
       setState(() { detail = d; form = f; name.text = (d['name'] as String?) ?? (u['name'] as String? ?? ''); });
       if (packs.contains(f)) {
         await app.ensureSprites(f);
