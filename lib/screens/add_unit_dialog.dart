@@ -58,6 +58,8 @@ class _AddUnitDialogState extends State<AddUnitDialog> {
       setState(() { detail = d; form = f; name.text = (d['name'] as String?) ?? (u['name'] as String? ?? ''); });
       if (packs.contains(f)) {
         await app.ensureSprites(f);
+        final base = ((d['forms'] as Map?)?[f] as Map?)?['shift']?['base']?.toString();
+        if (base != null && packs.contains(base)) await app.ensureSprites(base); // a shifted look borrows its victory from the base form
         if (seq != _pickSeq) return;
         d = await app.api!.ffbeUnit(u['id'] as String); // now with the animation list for the fetched look
         if (seq != _pickSeq) return;
@@ -79,6 +81,8 @@ class _AddUnitDialogState extends State<AddUnitDialog> {
     final seq = _pickSeq;
     try {
       await app.ensureSprites(f);
+      final base = ((detail?['forms'] as Map?)?[f] as Map?)?['shift']?['base']?.toString();
+      if (base != null && packs.contains(base)) await app.ensureSprites(base);
       if (seq != _pickSeq) return;
       final d = await app.api!.ffbeUnit(sel!['id'] as String);
       if (seq == _pickSeq) setState(() => detail = d);
@@ -239,7 +243,7 @@ class _AddUnitDialogState extends State<AddUnitDialog> {
           const SizedBox(height: 4),
           DropdownButtonFormField<String>(
             key: ValueKey('form$form'), initialValue: forms.containsKey(form) ? form : null, isExpanded: true,
-            items: [for (final e in forms.entries) DropdownMenuItem(value: e.key, child: Text('${rarityLabel(e.value['rarity'])}${packs.contains(e.key) ? '' : ' (no sprites)'}', style: Guide.text(), overflow: TextOverflow.ellipsis))],
+            items: [for (final e in forms.entries) DropdownMenuItem(value: e.key, child: Text('${rarityLabel(e.value['rarity'])}${shiftLabel(e.value['shift'])}${packs.contains(e.key) ? '' : ' (no sprites)'}', style: Guide.text(), overflow: TextOverflow.ellipsis))],
             onChanged: (v) { if (v != null) setForm(v); },
           ),
         ])),

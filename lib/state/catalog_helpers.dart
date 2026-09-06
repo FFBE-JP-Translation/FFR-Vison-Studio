@@ -107,3 +107,6 @@ String rarityRange(dynamic lo, dynamic hi) => lo == null && hi == null ? '' : (l
 
 const _animOrder = ['idle', 'standby', 'move', 'jump', 'atk', 'magicatk', 'magic_atk', 'limitatk', 'limit_atk', 'limitmove', 'limit_move', 'magic_standby', 'win', 'winbefore', 'win_before', 'dying', 'dead'];
 List<String> orderAnims(List<String> a) => [..._animOrder.where(a.contains), ...(a.where((x) => !_animOrder.contains(x)).toList()..sort())];
+
+/// " · Brave Shift" / " · Super Limit Break" for a shifted look, else nothing.
+String shiftLabel(dynamic sh) => sh == null ? '' : (sh['kind'] == 'brave_shift' ? ' · Brave Shift' : ' · Super Limit Break');

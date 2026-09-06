@@ -27,7 +27,7 @@ class Progress {
 typedef JsonMap = Map<String, dynamic>;
 
 class AppState extends ChangeNotifier {
-  AppState({required this.hostBase}) { _loadSettings(); }
+  AppState({required this.hostBase}) { _loadSettings(); _afterUpdate(); }
   final String hostBase;
   final paths = AppPaths.resolve();
   late final Downloader dl = Downloader(hostBase);
@@ -65,6 +65,8 @@ class AppState extends ChangeNotifier {
   String? banner; // a standing message (offline, old app); shown until the situation changes
   String? updateAvailable; // "1.0.0 build 5" when the host has a newer app
   bool engineDown = false; // the engine process ended on its own
+  bool updating = false;
+  String? updateStep;
   String? engineVersion;
   bool _stopping = false;
 
@@ -338,6 +340,64 @@ class AppState extends ChangeNotifier {
     return u;
   }
 
+  // ---------------------------------------------------------------- self-update
+  /// A running exe cannot replace itself, so: stage the new app next to the app data, write a small batch file that waits for
+  /// this process to end, copies the staged folder over the one the exe lives in and starts the new exe, then leave.
+  Future<void> updateApp() async {
+    final info = (manifest?['packs'] as JsonMap?)?['app'] as JsonMap?;
+    if (info == null || updating) return;
+    final exePath = Platform.resolvedExecutable;
+    final exeDir = File(exePath).parent.path;
+    try { final t = File(p.join(exeDir, '.write_test')); t.writeAsStringSync('x'); t.deleteSync(); }
+    catch (_) { showNotice('The app folder is read-only, so it cannot update itself. Download the new version from the page.'); return; }
+    updating = true; updateStep = 'downloading'; notifyListeners();
+    try {
+      final ver = manifest!['version'].toString();
+      final f = await dl.download(info['url'] as String, p.join(paths.downloads, 'app-$ver.zip'), sha256: info['sha256'] as String?, onProgress: (got, total) {
+        updateStep = 'downloading ${(got / 1048576).toStringAsFixed(0)} MB'; notifyListeners();
+      });
+      final staging = p.join(paths.root, 'app-staging', ver);
+      if (Directory(staging).existsSync()) Directory(staging).deleteSync(recursive: true);
+      updateStep = 'unpacking'; notifyListeners();
+      await Downloader.unzip(f, staging);
+      final inner = Directory(staging).listSync().whereType<Directory>().toList();
+      final src = inner.length == 1 ? inner.first.path : staging;
+      if (!File(p.join(src, p.basename(exePath))).existsSync() && !File(p.join(src, 'FFR Vision Studio.exe')).existsSync()) throw StateError('the downloaded app has no executable');
+      final newExe = File(p.join(src, p.basename(exePath))).existsSync() ? p.basename(exePath) : 'FFR Vision Studio.exe';
+      final cmd = File(p.join(paths.root, 'update.cmd'));
+      cmd.writeAsStringSync('@echo off\r\n'
+          ':wait\r\n'
+          'tasklist /FI "PID eq $pid" 2>NUL | find "$pid" >NUL && (timeout /t 1 /nobreak >NUL & goto wait)\r\n'
+          'robocopy "$src" "$exeDir" /E /IS /IT /NFL /NDL /NJH /NJS >NUL\r\n'
+          'rmdir /S /Q "$staging"\r\n'
+          'start "" "${p.join(exeDir, newExe)}"\r\n'
+          'del "%~f0"\r\n');
+      updateStep = 'restarting'; notifyListeners();
+      await Process.start('cmd.exe', ['/c', cmd.path], mode: ProcessStartMode.detached);
+      await shutdown();
+      exit(0);
+    } catch (e) {
+      updating = false; updateStep = null;
+      showNotice('The update did not go through: $e. The download page has the new version.');
+    }
+  }
+
+  /// After a self-update: drop the helper and say what happened, once.
+  void _afterUpdate() {
+    try {
+      final cmd = File(p.join(paths.root, 'update.cmd'));
+      if (cmd.existsSync()) cmd.deleteSync();
+      final st = Directory(p.join(paths.root, 'app-staging'));
+      if (st.existsSync()) st.deleteSync(recursive: true);
+      final f = File(paths.settingsFile);
+      final j = f.existsSync() ? json.decode(f.readAsStringSync()) as Map : <String, dynamic>{};
+      final last = j['lastRun']?.toString();
+      if (last != null && last != appTag) banner = 'Updated to $appLabel.';
+      j['lastRun'] = appTag;
+      f.writeAsStringSync(json.encode(j));
+    } catch (_) {}
+  }
+
   // ---------------------------------------------------------------- settings
   void _loadSettings() {
     try {
@@ -354,7 +414,12 @@ class AppState extends ChangeNotifier {
 
   void setDark(bool v) {
     dark = v; notifyListeners();
-    try { File(paths.settingsFile).writeAsStringSync(json.encode({'dark': dark})); } catch (_) {}
+    try {
+      final f = File(paths.settingsFile);
+      final j = f.existsSync() ? json.decode(f.readAsStringSync()) as Map : <String, dynamic>{};
+      j['dark'] = dark;
+      f.writeAsStringSync(json.encode(j));
+    } catch (_) {}
   }
 
   // ---------------------------------------------------------------- build / install

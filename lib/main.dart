@@ -23,6 +23,7 @@ import 'design/theme_toggle.dart';
 import 'design/widgets.dart';
 import 'design/wordmark.dart';
 import 'screens/about_dialog.dart';
+import 'screens/copy_vision_dialog.dart';
 import 'screens/home_screen.dart';
 import 'screens/setup_screen.dart';
 import 'screens/unit_screen.dart';
@@ -155,6 +156,10 @@ class Shell extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(22, 18, 22, 22),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            if (u != null) ...[
+              Padding(padding: const EdgeInsets.only(bottom: 4), child: GuideButton('All visions', icon: Icons.arrow_back, small: true, onPressed: () => app.select(null))),
+              const SizedBox(width: 14),
+            ],
             Wordmark(size: 34, onTap: () => app.select(null)),
             if (u != null) ...[
               Padding(padding: const EdgeInsets.fromLTRB(12, 0, 12, 2), child: Text('/', style: Guide.h2(Guide.inkFaint))),
@@ -166,16 +171,21 @@ class Shell extends StatelessWidget {
               child: Text(app.notice ?? (app.dirty ? 'saving' : 'saved'), key: ValueKey(app.notice ?? app.dirty), style: Guide.small(app.notice != null ? Guide.red : Guide.inkSoft)),
             ),
             const SizedBox(width: 16),
-            if (app.updateAvailable != null) ...[
-              InkWell(
-                onTap: () => launchUrl(Uri.parse(app.downloadPage)),
-                child: Text('version ${app.updateAvailable} is out · download', style: Guide.small(Guide.blue).copyWith(decoration: TextDecoration.underline, decorationColor: Guide.blue)),
-              ),
-              const SizedBox(width: 16),
+            if (u == null) ...[
+              if (app.updateAvailable != null) ...[
+                Text('version ${app.updateAvailable} is out', style: Guide.small(Guide.blue)),
+                const SizedBox(width: 8),
+                GuideButton(app.updating ? (app.updateStep ?? 'updating') : 'Update now', small: true, icon: Icons.system_update_alt, onPressed: app.updating ? null : app.updateApp),
+                const SizedBox(width: 16),
+              ],
+              InkWell(onTap: () => showAbout(context), child: Tooltip(message: 'About FFR Vision Studio', child: Text(appLabel, style: Guide.small(Guide.inkFaint)))),
+              const SizedBox(width: 14),
+              const ThemeToggle(),
+            ] else ...[
+              GuideButton('Play like a vision the game has', icon: Icons.content_copy, small: true, onPressed: () => showCopyVision(context, u, (patch) => app.update({...u, ...patch}))),
+              const SizedBox(width: 8),
+              GuideButton('Remove', icon: Icons.delete_outline, small: true, danger: true, onPressed: () => confirmRemove(context, app, u)),
             ],
-            InkWell(onTap: () => showAbout(context), child: Tooltip(message: 'About FFR Vision Studio', child: Text(appLabel, style: Guide.small(Guide.inkFaint)))),
-            const SizedBox(width: 14),
-            const ThemeToggle(),
           ]),
           if (app.engineDown) ...[
             const SizedBox(height: 10),

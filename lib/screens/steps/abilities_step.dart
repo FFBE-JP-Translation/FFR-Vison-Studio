@@ -38,12 +38,16 @@ class _AbilitiesStepState extends State<AbilitiesStep> {
     final skills = (cat['skills'] as List).cast<Map<String, dynamic>>();
     final lib = skills.where((s) => (s['seq'] as List).isNotEmpty && s['hasUnit'] == 'All' && ['Ability', 'Magic', 'MagicSword'].contains(s['attr']) && (s['id'] as num) < 460000).toList()
       ..sort((a, b) { final g = _group(a).compareTo(_group(b)); return g != 0 ? g : (a['name'] as String).compareTo(b['name'] as String); });
-    final groups = lib.map(_group).toSet().toList();
+    final studio = ((cat['studioSkills'] as List?) ?? []).cast<Map<String, dynamic>>();
+    final groups = [if (studio.isNotEmpty) 'Studio moves', ...lib.map(_group).toSet()];
     final s = q.trim().toLowerCase();
     final shown = lib.where((x) => (group == 'all' || _group(x) == group) && (s.isEmpty || (x['name'] as String).toLowerCase().contains(s) || describe(x).toLowerCase().contains(s))).toList();
     final aw = awakening(widget.unit);
     final granted = <num>{for (final t in aw) for (final g in t) if (g[0] == 'ActiveSkill') g[1] as num};
     final byId = {for (final x in skills) x['id'] as num: x};
+    final mySkills = Map<String, dynamic>.from((widget.unit['skills'] as Map?) ?? {});
+    final studioGranted = {for (final e in mySkills.entries) if ((e.value as Map)['studio'] != null) (e.value as Map)['studio'].toString()};
+    final studioShown = (group == 'all' || group == 'Studio moves') ? studio.where((x) => s.isEmpty || x['name'].toString().toLowerCase().contains(s) || x['desc'].toString().toLowerCase().contains(s)).toList() : <Map<String, dynamic>>[];
 
     void add(int tier, num id) {
       if (granted.contains(id)) return;
@@ -56,6 +60,21 @@ class _AbilitiesStepState extends State<AbilitiesStep> {
       final n = deepCopy(aw); n[from].removeWhere((x) => sameGrant(x, g)); n[to].add(g); widget.set({'awakening': n});
     }
     void remove(int i, int j) { final n = deepCopy(aw); n[i].removeAt(j); widget.set({'awakening': n}); }
+    /// A studio move is a recipe cloned into the unit's own skill range (445000 + (vision id - 13100) * 100 + 10 * slot).
+    void addStudio(int tier, Map<String, dynamic> sk) {
+      if (studioGranted.contains(sk['key'].toString())) return;
+      if (aw[tier].length >= tierCap) { _full(context, tier); return; }
+      final vid = (widget.unit['id'] as num).toInt();
+      final base = 445000 + (vid - 13100) * 100;
+      int? id;
+      for (var slot = 0; slot < 10; slot++) { if (!mySkills.containsKey('${base + 10 * slot}')) { id = base + 10 * slot; break; } }
+      if (id == null) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(backgroundColor: Guide.ink, content: Text('This unit already has ten custom moves.', style: Guide.text(Guide.paper)))); return; }
+      final r = sk['recipe'] as Map;
+      final skillsNew = Map<String, dynamic>.from(mySkills);
+      skillsNew['$id'] = {'from': r['from'], 'visuals': r['visuals'] ?? r['from'], 'jp': '${widget.unit['jp']}_${sk['name']}', 'en': sk['name'], 'desc': sk['desc'], 'descAuto': false, 'set': Map<String, dynamic>.from((r['set'] as Map?) ?? {}), 'studio': sk['key']};
+      final n = deepCopy(aw); n[tier].add(['ActiveSkill', id]);
+      widget.set({'skills': skillsNew, 'awakening': n});
+    }
 
     return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Expanded(
@@ -78,12 +97,24 @@ class _AbilitiesStepState extends State<AbilitiesStep> {
             child: Container(
               margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
               decoration: BoxDecoration(border: Border.all(color: Guide.hairline)),
-              child: shown.isEmpty
+              child: shown.isEmpty && studioShown.isEmpty
                   ? Center(child: Text('Nothing matches.', style: Guide.small()))
                   : ListView.builder(
-                      itemCount: shown.length,
+                      itemCount: shown.length + studioShown.length,
                       itemBuilder: (_, i) {
-                        final x = shown[i];
+                        if (i < studioShown.length) {
+                          final sk = studioShown[i];
+                          return LibraryRow(
+                            zebra: i.isOdd,
+                            title: sk['name'].toString(),
+                            detail: '${sk['desc']} · Studio moves',
+                            leading: ElementSwatch(((sk['recipe'] as Map)['set'] as Map?)?['element']?.toString()),
+                            payload: DragPayload('skill', sk['key'].toString()),
+                            done: studioGranted.contains(sk['key'].toString()),
+                            onAdd: (t) => addStudio(t, sk),
+                          );
+                        }
+                        final x = shown[i - studioShown.length];
                         final png = iconPng(cat, x['icon'] as String?);
                         final done = granted.contains(x['id'] as num);
                         return LibraryRow(
@@ -110,7 +141,7 @@ class _AbilitiesStepState extends State<AbilitiesStep> {
           kinds: const ['ActiveSkill'],
           dragKind: 'skill',
           hint: 'tier 1 is there at level 1',
-          onDrop: (tier, payload) => add(tier, payload as num),
+          onDrop: (tier, payload) { if (payload is String) { final sk = studio.where((x) => x['key'] == payload).firstOrNull; if (sk != null) addStudio(tier, sk); } else { add(tier, payload as num); } },
           render: (g, i, j) {
             final custom = (widget.unit['skills'] as Map?)?['${g[1]}'] as Map?;
             final x = byId[g[1] as num];

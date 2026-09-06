@@ -9,7 +9,6 @@ import 'steps/abilities_step.dart';
 import 'steps/bonuses_step.dart';
 import 'steps/resonance_step.dart';
 import 'steps/stats_step.dart';
-import 'copy_vision_dialog.dart';
 import 'unit_anim_pane.dart';
 
 /// A unit's page: left, the character entry (sprite, stats); right, the walkthrough in four numbered steps.
@@ -61,24 +60,6 @@ class _UnitScreenState extends State<UnitScreen> {
                     if (tpl != null) Padding(padding: const EdgeInsets.only(top: 4), child: Text('${tpl['name']}${el != null && el != 'None' ? ' · $el' : ''}${tpl['good'] == true ? '' : ' · no limit-burst motion'}', style: Guide.small(tpl['good'] == true ? Guide.inkSoft : Guide.red))),
                   ]);
                 })),
-                const SizedBox(height: 14),
-                GuideButton('Play like a vision the game has', icon: Icons.content_copy, small: true, onPressed: () => showCopyVision(context, u, set)),
-                const SizedBox(height: 4),
-                Text('Copies that vision\'s abilities, bonuses, stats and Resonance numbers onto this unit.', style: Guide.small(Guide.inkFaint)),
-                const SizedBox(height: 14),
-                Row(children: [
-                  GuideButton('Back to all visions', icon: Icons.arrow_back, small: true, onPressed: () => app.select(null)),
-                  const Spacer(),
-                  GuideButton('Remove', small: true, danger: true, onPressed: () async {
-                    final ok = await showDialog<bool>(context: context, builder: (c) => AlertDialog(
-                      backgroundColor: Guide.paper, shape: Border.fromBorderSide(Guide.frame),
-                      title: Text('Remove ${u['en']} from the mod?', style: Guide.h2()),
-                      content: Text('The unit and its choices are deleted from the mod. The next install removes it from the game.', style: Guide.text()),
-                      actions: [GuideButton('Keep', onPressed: () => Navigator.pop(c, false)), GuideButton('Remove', danger: true, onPressed: () => Navigator.pop(c, true))],
-                    ));
-                    if (ok == true) await app.removeUnit(u['key'] as String);
-                  }),
-                ]),
               ]),
             ),
           ),
@@ -109,4 +90,15 @@ class _UnitScreenState extends State<UnitScreen> {
       ),
     ]);
   }
+}
+
+/// Asks, then removes the unit from the mod (the next install removes it from the game).
+Future<void> confirmRemove(BuildContext context, AppState app, Map<String, dynamic> u) async {
+  final ok = await showDialog<bool>(context: context, builder: (c) => AlertDialog(
+    backgroundColor: Guide.paper, shape: Border.fromBorderSide(Guide.frame),
+    title: Text('Remove ${u['en']} from the mod?', style: Guide.h2()),
+    content: Text('The unit and its choices are deleted from the mod. The next install removes it from the game.', style: Guide.text()),
+    actions: [GuideButton('Keep', onPressed: () => Navigator.pop(c, false)), GuideButton('Remove', danger: true, onPressed: () => Navigator.pop(c, true))],
+  ));
+  if (ok == true) await app.removeUnit(u['key'] as String);
 }

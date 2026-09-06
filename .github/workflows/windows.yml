@@ -1,0 +1,35 @@
+name: Windows build
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      build:
+        description: build number to stamp (1.0.0.<build>)
+        default: "0"
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+      - name: Build
+        shell: pwsh
+        run: |
+          $build = "${{ github.event.inputs.build }}"
+          if (-not $build) { $build = "0" }
+          flutter build windows --release --build-name 1.0.0 --build-number $build --dart-define=APP_VERSION=1.0.0 --dart-define=APP_BUILD=$build
+          Rename-Item build/windows/x64/runner/Release/ffr_vision_studio.exe "FFR Vision Studio.exe"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FFR-Vision-Studio-windows
+          path: build/windows/x64/runner/Release/
