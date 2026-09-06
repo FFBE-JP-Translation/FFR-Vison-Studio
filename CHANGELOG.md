@@ -14,7 +14,9 @@ needs them.
 - "Studio moves" in the Abilities library: Raegen Blast (staggers every enemy, no damage) can be granted like any ability.
 - Unit page header: Back on the left, "Play like a vision the game has" and "Remove" on the right; the left column is
   the entry only.
-- "Update now": the app downloads the new build, stages it and restarts itself; the download page remains the fallback.
+- "Update now": the app downloads the new build, verifies it, stages it and restarts itself through a small PowerShell
+  helper (started via `cmd /c start`, the one launch route that outlives the closing app); the download page remains the
+  fallback, and read-only app folders are sent there.
 - Developer environment (`tools/release/devenv.py`): build a numbered pack, serve it locally, start the app from a scratch
   app-data folder.
 

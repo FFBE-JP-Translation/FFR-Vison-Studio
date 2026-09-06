@@ -39,3 +39,17 @@ serves `build/release/host` on 127.0.0.1:8766 and starts the app with `LOCALAPPD
 
 `CHANGELOG.md` (by build), `LICENSE` (MIT for the code; the game's art and data are Square Enix's and excluded),
 `CONTRIBUTING.md`, `.github/workflows/windows.yml` (analyze, test, build, artifact on every push).
+
+## Publishing this folder as its own repository
+
+The app is developed inside the main project repository and published on GitHub on its own, with its history:
+
+```
+git subtree split --prefix=app/ffr_vision_studio -b app-repo      # from the main repository's root
+git push git@github.com:<owner>/ffr-vision-studio.git app-repo:main
+```
+
+Later releases repeat both lines (the split is incremental). The `../../` links above point into the main repository and do
+not resolve in the split copy; `CONTRIBUTING.md`, `CHANGELOG.md`, `LICENSE` and the workflow are self-contained. The
+workflow builds and tests on every push and attaches the Release folder as an artifact; a numbered build is a manual run
+("Run workflow" with the build number), while the published zips still come from `build_host_pack.py` in the main repository.

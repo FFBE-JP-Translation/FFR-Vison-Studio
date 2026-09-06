@@ -102,7 +102,7 @@ class AppState extends ChangeNotifier {
           // The host's engine needs a newer app than this one. Keep what is installed rather than mixing versions.
           if (!haveEngine) throw StateError('This copy of the app ($appLabel) is older than the packs on the host. Download the new app from $downloadPage.');
           _markInstalled(installed);
-          banner = 'A newer version is on the host and needs the new app. Download it from the page; this copy keeps working as it is.';
+          banner = 'A newer version is on the host and needs the new app. Press Update now, or download it from the page; this copy keeps working as it is.';
         } else {
           final packs = man['packs'] as JsonMap;
           Future<void> pack(int step, String name, String into) async {
@@ -341,7 +341,7 @@ class AppState extends ChangeNotifier {
   }
 
   // ---------------------------------------------------------------- self-update
-  /// A running exe cannot replace itself, so: stage the new app next to the app data, write a small batch file that waits for
+  /// A running exe cannot replace itself, so: stage the new app next to the app data, write a small script that waits for
   /// this process to end, copies the staged folder over the one the exe lives in and starts the new exe, then leave.
   Future<void> updateApp() async {
     final info = (manifest?['packs'] as JsonMap?)?['app'] as JsonMap?;
@@ -364,20 +364,21 @@ class AppState extends ChangeNotifier {
       final src = inner.length == 1 ? inner.first.path : staging;
       if (!File(p.join(src, p.basename(exePath))).existsSync() && !File(p.join(src, 'FFR Vision Studio.exe')).existsSync()) throw StateError('the downloaded app has no executable');
       final newExe = File(p.join(src, p.basename(exePath))).existsSync() ? p.basename(exePath) : 'FFR Vision Studio.exe';
-      // The helper is a PowerShell script started detached: it waits for this process to end, copies the staged folder over
-      // the exe's folder, starts the new exe and removes itself. (A cmd script with `tasklist | find` hangs without a console.)
+      // The helper is a PowerShell script: it waits for this process to end, copies the staged folder over the exe's folder,
+      // starts the new exe and removes itself. It is started through `cmd /c start` because a console child started detached
+      // straight from Dart dies with this process (and a cmd script with `tasklist | find` hangs without a console).
       final ps1 = File(p.join(paths.root, 'update.ps1'));
       ps1.writeAsStringSync([
         r'$ErrorActionPreference = "SilentlyContinue"',
         r'$t = 0',
         'while ((Get-Process -Id $pid -ErrorAction SilentlyContinue) -and \$t -lt 120) { Start-Sleep -Seconds 1; \$t++ }',
         'robocopy "$src" "$exeDir" /E /IS /IT /NFL /NDL /NJH /NJS | Out-Null',
-        'Remove-Item -Recurse -Force "$staging"',
+        'Remove-Item -Recurse -Force "${p.join(paths.root, 'app-staging')}"',
         'Start-Process -FilePath "${p.join(exeDir, newExe)}" -WorkingDirectory "$exeDir"',
         r'Remove-Item -Force $MyInvocation.MyCommand.Path',
       ].join('\r\n'));
       updateStep = 'restarting'; notifyListeners();
-      await Process.start('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', ps1.path], mode: ProcessStartMode.detached);
+      await Process.start('cmd.exe', ['/c', 'start', '""', '/min', 'powershell.exe', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', ps1.path], mode: ProcessStartMode.detached);
       await shutdown();
       exit(0);
     } catch (e) {
