@@ -6,8 +6,8 @@ Thanks for looking at the studio. A few things that keep it easy to work on.
 
 The Windows app only. It downloads the engine (Python + .NET tools packaged as `FFR Vision Studio Engine.exe`) and the game
 data packs from the project's hosts on first start, then talks to that engine over localhost. The engine's source lives in
-the main project repository (`tools/devui`, `tools/release`); issues about the mod itself (what the game shows) belong
-there, issues about the app (what the window shows) belong here.
+the main project repository, which is not published yet; until it is, issues about the mod itself (what the game shows) are
+welcome here too, marked as engine issues.
 
 ## Setup
 
@@ -23,11 +23,11 @@ Run the built exe with these environment variables to keep your real install unt
 - `LOCALAPPDATA` pointed at a scratch folder (the app keeps everything under `<LOCALAPPDATA>\FFR Vision Studio`)
 - `FFR_STUDIO_HOST` pointed at a local copy of the host tree if you have one (defaults to the live host)
 
-`tools/release/devenv.py` in the main repository does both.
+The main repository's `devenv.py` does both and serves a local pack; without it, the live host works for development.
 
 ## Design rules
 
-The look is a strategy-guide spread; `DESIGN.md` and `lib/design/DIRECTION.md` in the main repository describe it. In short:
+The look is a strategy-guide spread; `DESIGN.md` and `lib/design/DIRECTION.md` describe it. In short:
 colours come from `Guide` (both editions), pictures of the game sit in 2 px ink frames, sections open with a colour band, one
 red button per screen changes the game, no rounded corners, no gradients, plain copy in the second person.
 
