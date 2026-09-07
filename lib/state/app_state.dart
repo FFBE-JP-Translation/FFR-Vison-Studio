@@ -11,6 +11,7 @@ import '../services/engine.dart';
 import '../services/game_locator.dart';
 import '../services/paths.dart';
 import '../version.dart';
+import 'catalog_helpers.dart';
 
 /// Where the app is in its life: bootstrapping (downloads + engine), first-run setup, or ready.
 enum Phase { boot, setup, ready, failed }
@@ -270,6 +271,14 @@ class AppState extends ChangeNotifier {
   Future<void> loadAll() async {
     catalog = await api!.catalog();
     units = await api!.spec();
+    if (catalog?['ffbeResonance'] != null) {
+      units = units.map((u) {
+        final upgraded = migrateCgResonance(u as JsonMap);
+        if (!identical(upgraded, u)) dirty = true;
+        return upgraded;
+      }).toList();
+      if (dirty) _saveSoon();
+    }
     await refreshStatus();
     notifyListeners();
   }

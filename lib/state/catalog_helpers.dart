@@ -1,4 +1,15 @@
 /// Plain-language readings of the engine's catalog rows, mirroring tools/devui/web/src/api.ts `describe` and Easy.tsx.
+const cgResonanceIds = {440010, 440090, 440110};
+
+Map<String, dynamic> migrateCgResonance(Map<String, dynamic> unit) {
+  final lb = unit['lb_custom'] as Map?;
+  if (unit['ffbe'] != null && lb != null &&
+      cgResonanceIds.contains(lb['visuals'] ?? lb['from']) && lb['presentation'] != 'ffbe') {
+    return {...unit, 'lb_custom': {...lb, 'presentation': 'ffbe'}};
+  }
+  return unit;
+}
+
 const targetText = <String, String>{
   'Single|Enemies': 'one enemy', 'Group|Enemies': 'all enemies', 'Random|Enemies': 'random enemies', 'Spread|Enemies': 'enemies in a line',
   'SingleAndGroup|Enemies': 'one enemy, then all', 'Single|Friendlies': 'one ally', 'Group|Friendlies': 'all allies', 'Self|Friendlies': 'self', 'Self|Enemies': 'self',

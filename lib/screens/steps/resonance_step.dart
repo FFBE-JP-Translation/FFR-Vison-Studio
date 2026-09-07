@@ -97,7 +97,8 @@ class _ResonanceStepState extends State<ResonanceStep> {
     final u = widget.unit;
     final own = context.read<AppState>().catalog?['ffbeResonance'] != null && u['ffbe'] != null;
     widget.set({'lb_custom': {
-      'presentation': own ? 'ffbe' : 'template', 'field_color_mode': 'element', 'audio': 'disabled', 'mechanics': 'ffbe',
+      'presentation': own ? 'ffbe' : 'template', 'field_color_mode': 'element',
+      'audio': own ? 'native' : 'disabled', 'audio_codec': 'host', 'mechanics': 'ffbe',
       'from': 440110, 'visuals': 440110, 'target_effect': null, 'clone_sequence': true, 'mute': ['VO_'], 'caption_from': 440260,
       'jp': '${u['jp']}_LB', 'en': "${u['en']}'s Resonance",
       'desc': '', 'descAuto': true, 'set': {'element': 'None'},
@@ -117,7 +118,7 @@ class _ResonanceStepState extends State<ResonanceStep> {
     final autoColor = (lb['field_color_mode'] ?? 'element') == 'element';
     final finish = (cat['skills'] as List).cast<Map<String, dynamic>>().where((s) => s['attr'] == 'FinishBlow').toList();
     final effById = {for (final e in (cat['effects'] as List).cast<Map<String, dynamic>>()) e['id'] as num: e};
-    final templates = (cat['lbTemplates'] as List).cast<Map<String, dynamic>>();
+    final templates = (cat['lbTemplates'] as List).cast<Map<String, dynamic>>().where((t) => !cgResonanceIds.contains(t['id']));
     final targetEffects = ((cat['targetEffects'] as List?) ?? const []).cast<Map<String, dynamic>>();
     final good = templates.where((t) => t['good'] == true).toList();
     final others = templates.where((t) => t['good'] != true).toList();
@@ -212,14 +213,25 @@ class _ResonanceStepState extends State<ResonanceStep> {
                     DropdownMenuItem(value: 'ffbe', child: Text('Own FFBE limit burst')),
                     DropdownMenuItem(value: 'template', child: Text('Game sequence (advanced)')),
                   ],
-                  onChanged: supportsOwn ? (v) { if (v != null) upd({'presentation': v}); } : null,
+                  onChanged: supportsOwn ? (v) {
+                    if (v != null) {
+                      upd({'presentation': v,
+                        if (v == 'template' && cgResonanceIds.contains(vis)) 'visuals': 414090});
+                    }
+                  } : null,
                 )),
                 if (own) ...[
                   row('Animation', Text(
-                    'Plays this vision’s full limit-burst motion${lbSeconds != null ? ' (${secs(lbSeconds)})' : ''}, then restores the battle field. FFBE particles and audio are still in development.',
+                    'Plays this vision’s full limit-burst motion${lbSeconds != null ? ' (${secs(lbSeconds)})' : ''}, then restores the battle field. Attack particles are still in development.',
                     style: Guide.text(),
                   )),
                   if (supportsOwn) ...[
+                    row('Sound', DropdownButtonFormField<String>(
+                      key: ValueKey('audio-${lb['audio']}'), initialValue: lb['audio'] == 'native' ? 'native' : 'disabled',
+                      items: const [DropdownMenuItem(value: 'native', child: Text('FFBE charging and attack sounds')),
+                        DropdownMenuItem(value: 'disabled', child: Text('Off'))],
+                      onChanged: (v) { if (v != null) upd({'audio': v, 'audio_codec': 'host'}); },
+                    )),
                     row('Mechanics', DropdownButtonFormField<String>(
                       key: ValueKey('mechanics-$autoMechanics'), initialValue: autoMechanics ? 'ffbe' : 'custom',
                       items: const [DropdownMenuItem(value: 'ffbe', child: Text('Use imported LB data')),

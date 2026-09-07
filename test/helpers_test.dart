@@ -4,6 +4,21 @@ import 'package:ffr_vision_studio/version.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('saved CG resonances use the own LB while preserving custom settings', () {
+    for (final id in cgResonanceIds) {
+      final unit = <String, dynamic>{'ffbe': {'id': '123'}, 'lb_custom': {
+        'from': 440110, 'visuals': id, 'presentation': 'template', 'field_color': '#123456'}};
+      final upgraded = migrateCgResonance(unit);
+      expect(upgraded['lb_custom']['presentation'], 'ffbe');
+      expect(upgraded['lb_custom']['field_color'], '#123456');
+      expect(unit['lb_custom']['presentation'], 'template');
+      expect(identical(migrateCgResonance(upgraded), upgraded), isTrue);
+    }
+    final safe = <String, dynamic>{'ffbe': {'id': '123'}, 'lb_custom': {
+      'from': 440110, 'visuals': 414090, 'presentation': 'template'}};
+    expect(identical(migrateCgResonance(safe), safe), isTrue);
+  });
+
   test('rarity labels: stars for numbers, NV and NV+ as written', () {
     expect(rarityLabel(5), '5★');
     expect(rarityLabel('7'), '7★');
