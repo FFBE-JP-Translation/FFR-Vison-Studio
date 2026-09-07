@@ -7,13 +7,21 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 class ProfileApi extends Api {
-  ProfileApi() : super('http://unused');
+  ProfileApi({this.fallback = false}) : super('http://unused');
+  final bool fallback;
   @override
   Future<double?> motionSeconds(String id, String motion) async => 4.2;
   @override
   Future<Map<String, dynamic>> ffbeUnit(String id) async => {'forms': <String, dynamic>{}};
   @override
   Future<Map<String, dynamic>> ffbeLb(String form, {String? lbId, String source = 'JP'}) async {
+    if (fallback) {
+      return {'lbId': '7', 'supported': true, 'sourceSupported': false, 'mode': 'fallback',
+        'target': 'All enemies', 'hits': 10, 'elements': [], 'fieldColor': '#808080', 'totalPower': 36,
+        'movement': {'type': 0}, 'issues': [], 'warnings': [], 'variants': [],
+        'set': {'TargetType': 'Group', 'hitCount': 10, 'element': 'None', 'magnification': 36},
+        'description': 'Temporary resonance: 10 hits of non-elemental physical damage to all enemies.'};
+    }
     final ice = lbId == '8';
     return {'lbId': ice ? '8' : '7', 'supported': true, 'target': 'One enemy', 'hits': 24,
       'elements': [ice ? 'Ice' : 'Fire'], 'fieldColor': ice ? '#00FFFF' : '#EE5555', 'totalPower': 36,
@@ -41,6 +49,28 @@ class ProfileState extends ChangeNotifier implements AppState {
 }
 
 void main() {
+  testWidgets('unsupported LB saves a labelled damage fallback', (tester) async {
+    tester.view.physicalSize = const Size(1300, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final app = ProfileState()..api = ProfileApi(fallback: true);
+    addTearDown(app.dispose);
+    Map<String, dynamic> unit = {'key': 'aerith', 'jp': 'Aerith', 'en': 'Aerith', 'ffbe': {'id': '207000407'},
+      'lb_custom': {'from': 440110, 'presentation': 'ffbe', 'mechanics': 'ffbe', 'descAuto': true, 'set': {}}};
+    await tester.pumpWidget(ChangeNotifierProvider<AppState>.value(value: app,
+      child: MaterialApp(theme: Guide.theme(), home: Scaffold(body: StatefulBuilder(
+        builder: (context, setState) => ResonanceStep(unit: unit, set: (patch) => setState(() => unit = {...unit, ...patch})),
+      )))));
+    await tester.pumpAndSettle();
+    expect(find.text('Animation incomplete'), findsOneWidget);
+    expect(find.textContaining('Generic damage fallback:'), findsOneWidget);
+    expect((unit['lb_custom'] as Map)['set']['hitCount'], 10);
+    expect((unit['lb_custom'] as Map)['set']['element'], 'None');
+    expect((unit['lb_custom'] as Map)['desc'], startsWith('Temporary resonance:'));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('LB data replaces donor mechanics and variant changes keep custom colour', (tester) async {
     tester.view.physicalSize = const Size(1600, 1400);
     tester.view.devicePixelRatio = 1;

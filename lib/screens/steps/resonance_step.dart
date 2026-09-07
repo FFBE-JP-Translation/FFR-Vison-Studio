@@ -221,10 +221,11 @@ class _ResonanceStepState extends State<ResonanceStep> {
                   } : null,
                 )),
                 if (own) ...[
-                  row('Animation', Text(
-                    'Plays this vision’s full limit-burst motion${lbSeconds != null ? ' (${secs(lbSeconds)})' : ''}, then restores the battle field. Attack particles are still in development.',
-                    style: Guide.text(),
-                  )),
+                  row('Animation', Box(fill: Guide.paper2, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('Animation incomplete', style: Guide.strong()),
+                    const SizedBox(height: 6),
+                    Text('Plays this vision’s limit-burst motion${lbSeconds != null ? ' (${secs(lbSeconds)})' : ''}. Full FFBE attack effects are still being added; damage resonances use generic FFR impact effects.', style: Guide.small()),
+                  ]))),
                   if (supportsOwn) ...[
                     row('Sound', DropdownButtonFormField<String>(
                       key: ValueKey('audio-${lb['audio']}'), initialValue: lb['audio'] == 'native' ? 'native' : 'disabled',
@@ -248,11 +249,20 @@ class _ResonanceStepState extends State<ResonanceStep> {
                         )),
                       if (autoMechanics && lbProfile!['supported'] == true) ...[
                         row('LB data', Text('${lbProfile!['target']} · ${lbProfile!['hits']} hits · ${(lbProfile!['elements'] as List).isEmpty ? 'Non-elemental' : (lbProfile!['elements'] as List).join(' / ')}', style: Guide.text())),
-                        row('Power', Text('Cloud’s total resonance power (${lbProfile!['totalPower']}), split across the LB’s hit weights. Includes Cloud’s level scaling and critical bonus.', style: Guide.small())),
-                        row('Movement', Text('FFBE move type ${(lbProfile!['movement'] as Map?)?['type']}; LB offset ${(lbProfile!['movement'] as Map?)?['lbOffset'] ?? 'unavailable — native spacing'}.', style: Guide.small())),
+                        if (lbProfile!['mode'] == 'support')
+                          row('Effects', Text(lbProfile!['description'].toString(), style: Guide.small()))
+                        else if (lbProfile!['mode'] == 'fallback') ...[
+                          row('Mechanics used', Text('Generic damage fallback: 10 equal hits to all enemies, using Cloud’s total power (${lbProfile!['totalPower']}). The original LB mechanics are not available yet.', style: Guide.text())),
+                          row('Movement', Text('Stays beside the equipped character.', style: Guide.small())),
+                        ] else ...[
+                          row('Power', Text('Cloud’s total resonance power (${lbProfile!['totalPower']}), split across the LB’s hit weights. Includes Cloud’s level scaling and critical bonus.', style: Guide.small())),
+                          row('Movement', Text('FFBE move type ${(lbProfile!['movement'] as Map?)?['type']}; LB offset ${(lbProfile!['movement'] as Map?)?['lbOffset'] ?? 'unavailable — native spacing'}.', style: Guide.small())),
+                        ],
                       ],
-                      for (final issue in [...(lbProfile!['issues'] as List? ?? []), ...(lbProfile!['warnings'] as List? ?? [])])
+                      for (final issue in (lbProfile!['issues'] as List? ?? []))
                         Text(issue.toString(), style: Guide.small(Guide.red)),
+                      for (final warning in (lbProfile!['warnings'] as List? ?? []))
+                        Text(warning.toString(), style: Guide.small()),
                     ] else ...[
                       Text(profileError ?? ((cat['ffbeResonance'] as Map?)?['lbProfiles'] == true ? 'Reading LB targeting and hit data…' : 'Update the local engine to resolve LB mechanics.'), style: Guide.small()),
                       if (profileError != null) TextButton(onPressed: _loadProfile, child: const Text('Retry')),
