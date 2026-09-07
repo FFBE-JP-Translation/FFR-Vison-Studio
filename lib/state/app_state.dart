@@ -219,6 +219,8 @@ class AppState extends ChangeNotifier {
       placed = (st['placed'] as num?)?.toInt() ?? 0;
       gameRoot = (st['gameRoot'] as String?) ?? gameRoot;
       engineVersion = st['engineVersion']?.toString();
+      // a preparation that lost a table (interrupted, or a dump that failed) shows up here: go back to the setup page
+      if (st['setupNeeded'] == true && phase == Phase.ready && setupProgress?.state != 'working') { phase = Phase.setup; setupProgress = null; }
       notifyListeners();
     } catch (_) {
       if (engine != null && !engine!.running && !_stopping) { engineDown = true; notifyListeners(); }

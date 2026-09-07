@@ -111,15 +111,16 @@ class _StudioAppState extends State<StudioApp> with WindowListener {
   void onWindowClose() async {
     if (_closing) return;
     final app = context.read<AppState>();
-    if (app.building) {
+    final preparing = app.setupProgress?.state == 'working';
+    if (app.building || preparing) {
       final ctx = navKey.currentContext;
       final ok = ctx == null ? true : await showDialog<bool>(
         context: ctx,
         builder: (c) => AlertDialog(
           backgroundColor: Guide.paper, shape: Border.fromBorderSide(Guide.frame),
-          title: Text('A build is running', style: Guide.h2()),
-          content: Text('Closing now stops the engine in the middle of writing the mod. If it was installing, the game folder keeps the previous files (there is a backup). Close anyway?', style: Guide.text()),
-          actions: [GuideButton('Keep building', onPressed: () => Navigator.pop(c, false)), GuideButton('Close anyway', danger: true, onPressed: () => Navigator.pop(c, true))],
+          title: Text(preparing ? "The game's data is being prepared" : 'A build is running', style: Guide.h2()),
+          content: Text(preparing ? 'Closing now leaves the preparation half done; the next start picks it up where it stopped. Close anyway?' : 'Closing now stops the engine in the middle of writing the mod. If it was installing, the game folder keeps the previous files (there is a backup). Close anyway?', style: Guide.text()),
+          actions: [GuideButton(preparing ? 'Keep preparing' : 'Keep building', onPressed: () => Navigator.pop(c, false)), GuideButton('Close anyway', danger: true, onPressed: () => Navigator.pop(c, true))],
         ),
       );
       if (ok != true) return;
