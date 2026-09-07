@@ -160,7 +160,7 @@ class _ResonanceStepState extends State<ResonanceStep> {
                   if (tpl?['blurb'] != null) Text(tpl!['blurb'].toString(), style: Guide.small(Guide.ink)),
                   if (tpl != null && tpl['good'] != true) ...[
                     const SizedBox(height: 6),
-                    Box(fill: Guide.warn, child: Text("This one is the owner's cinematic: your unit's own limit-burst motion is not played. Hibernal Fury, Healing Wind and Resolute Bastion do play it.", style: Guide.small(Guide.ink))),
+                    Box(fill: Guide.warn, child: Text("This one is the owner's Resonance. Its CG movie is left out of your copy, but the long wait it filled stays and your unit's own limit-burst motion is not played (or only at the end). Hibernal Fury, Healing Wind and Resolute Bastion play it.", style: Guide.small(Guide.ink))),
                   ] else if (stretched) ...[
                     const SizedBox(height: 6),
                     Box(fill: Guide.warn, child: Text("This unit's limit-burst motion runs ${secs(lbSeconds)}; this animation leaves ${secs(window)} for it, so the timing after it is stretched to fit. Stretched timing has not been checked in the game yet; Hibernal Fury gives the most room.", style: Guide.small(Guide.ink))),

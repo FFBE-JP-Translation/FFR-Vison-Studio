@@ -15,7 +15,6 @@ Future<void> showCopyVision(BuildContext context, Map<String, dynamic> unit, voi
     ..sort((a, b) => (a['name'] as String).compareTo(b['name'] as String));
   final skillsById = {for (final s in (cat['skills'] as List).cast<Map<String, dynamic>>()) s['id'] as num: s};
   final passivesById = {for (final s in (cat['passives'] as List).cast<Map<String, dynamic>>()) s['id'] as num: s};
-  final templates = (cat['lbTemplates'] as List).cast<Map<String, dynamic>>();
   String? picked;
   await showDialog<void>(
     context: context,
@@ -107,7 +106,7 @@ Future<void> showCopyVision(BuildContext context, Map<String, dynamic> unit, voi
                   final mech = skillsById[fb];
                   if (mech != null) {
                     lb['from'] = fb;
-                    if (templates.any((t) => t['id'] == fb)) lb['visuals'] = fb;
+                    // the animation stays the unit's own choice: an owner's Resonance would bring its CG movie window along
                     if (fb >= 440000 && fb < 441000) lb['caption_from'] = fb;
                     final s = Map<String, dynamic>.from((lb['set'] as Map?) ?? {});
                     s['element'] = mech['element'] ?? 'None';
