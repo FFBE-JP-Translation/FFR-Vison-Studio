@@ -54,7 +54,9 @@ class _ResonanceStepState extends State<ResonanceStep> {
   void _enable() {
     final u = widget.unit;
     widget.set({'lb_custom': {
-      'from': 414090, 'visuals': 414090, 'clone_sequence': true, 'mute': ['VO_'], 'caption_from': 440260, 'jp': '${u['jp']}_LB', 'en': "${u['en']}'s Resonance",
+      // Cloud's staging: no domain, and the generator drops his CG movie and his own slashes from the copy.
+      'from': 414090, 'visuals': 440110, 'target_effect': null, 'clone_sequence': true, 'mute': ['VO_'], 'caption_from': 440260,
+      'jp': '${u['jp']}_LB', 'en': "${u['en']}'s Resonance",
       'desc': '', 'descAuto': true, 'set': {'element': 'None'},
       'sequence_edits': {'master': [{'match': {'EventType': 'OtherChangeSubSpaceColor'}, 'set': {'Other_ChangeSubSpaceColor_Color': {'R': 0.25, 'G': 0.25, 'B': 0.35, 'A': 1.0}}}]}, 'effect_swaps': [],
     }});
@@ -69,6 +71,7 @@ class _ResonanceStepState extends State<ResonanceStep> {
     final finish = (cat['skills'] as List).cast<Map<String, dynamic>>().where((s) => s['attr'] == 'FinishBlow').toList();
     final effById = {for (final e in (cat['effects'] as List).cast<Map<String, dynamic>>()) e['id'] as num: e};
     final templates = (cat['lbTemplates'] as List).cast<Map<String, dynamic>>();
+    final targetEffects = ((cat['targetEffects'] as List?) ?? const []).cast<Map<String, dynamic>>();
     final good = templates.where((t) => t['good'] == true).toList();
     final others = templates.where((t) => t['good'] != true).toList();
     String label(Map<String, dynamic> s) { final o = ownerOf(cat, s['id'] as num); return "${o != null ? "$o's " : ''}${s['name']}"; }
@@ -175,6 +178,17 @@ class _ResonanceStepState extends State<ResonanceStep> {
                   ),
                   if (showTimeline) ...[const SizedBox(height: 6), _timeline()],
                 ])),
+                if (tpl?['cinematic'] == true)
+                  row('On the targets', Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    DropdownButtonFormField<String>(
+                      key: ValueKey('tfx${lb['target_effect']}'), isExpanded: true,
+                      initialValue: targetEffects.any((t) => t['path'] == lb['target_effect']) ? (lb['target_effect']?.toString() ?? 'none') : 'none',
+                      items: [for (final t in targetEffects) DropdownMenuItem(value: (t['path'] ?? 'none').toString(), child: Text(t['name'].toString(), style: Guide.text(), overflow: TextOverflow.ellipsis))],
+                      onChanged: (v) => upd({'target_effect': (v == null || v == 'none') ? null : v}),
+                    ),
+                    const SizedBox(height: 4),
+                    Text("What appears on the enemies or allies when the Resonance lands. The owner's own slashes are left out unless you pick them back.", style: Guide.small()),
+                  ])),
                 row('It is', Choice<String>(
                   options: const [('damage', 'a damaging ability'), ('heal', 'a healing ability'), ('buff', 'a buffing ability'), ('debuff', 'a debuffing ability')],
                   value: kind, onChanged: setKind,
