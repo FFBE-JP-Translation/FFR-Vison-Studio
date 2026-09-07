@@ -61,6 +61,11 @@ left page (replacing the still), and in the Resonance step (starting on the limi
 
 ## Parts (`lib/design/widgets.dart`)
 
+The Resonance step defaults to the vision's own FFBE limit-burst presentation when supported by the local engine.
+Its field colour control uses framed swatches with named presets, an ink fill for selection, and a custom hex field.
+Orange is the default. Invalid or incomplete input stays in the field without replacing the saved colour. Template
+animation, target effects and caption controls appear only under the advanced game-sequence presentation.
+
 - **Band** — the section header strip. Colour names the domain. Optional trailing note in paper3 caps.
 - **Frame** — 2 px ink border, no radius. For sprites, icons, previews.
 - **Box** — 1.5 px ink border, optional fill. For tables and forms.

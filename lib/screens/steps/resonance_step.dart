@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../design/choice.dart';
+import '../../design/resonance_field_color.dart';
 import '../../design/theme.dart';
 import '../../design/widgets.dart';
 import '../../state/app_state.dart';
 import '../../state/catalog_helpers.dart';
 import '../unit_anim_pane.dart';
 
-/// Step 4: one of the demo's Resonance animations plus one existing Resonance's mechanics.
+/// Step 4: the vision's own LB presentation plus the selected skill mechanics.
 class ResonanceStep extends StatefulWidget {
   const ResonanceStep({super.key, required this.unit, required this.set});
   final Map<String, dynamic> unit;
@@ -53,12 +54,13 @@ class _ResonanceStepState extends State<ResonanceStep> {
 
   void _enable() {
     final u = widget.unit;
+    final own = context.read<AppState>().catalog?['ffbeResonance'] != null && u['ffbe'] != null;
     widget.set({'lb_custom': {
-      // Cloud's staging: no domain, and the generator drops his CG movie and his own slashes from the copy.
+      'presentation': own ? 'ffbe' : 'template', 'field_color': ResonanceFieldColor.defaultColor,
       'from': 414090, 'visuals': 440110, 'target_effect': null, 'clone_sequence': true, 'mute': ['VO_'], 'caption_from': 440260,
       'jp': '${u['jp']}_LB', 'en': "${u['en']}'s Resonance",
       'desc': '', 'descAuto': true, 'set': {'element': 'None'},
-      'sequence_edits': {'master': [{'match': {'EventType': 'OtherChangeSubSpaceColor'}, 'set': {'Other_ChangeSubSpaceColor_Color': {'R': 0.25, 'G': 0.25, 'B': 0.35, 'A': 1.0}}}]}, 'effect_swaps': [],
+      'sequence_edits': {}, 'effect_swaps': [],
     }});
   }
 
@@ -68,6 +70,8 @@ class _ResonanceStepState extends State<ResonanceStep> {
     final cat = app.catalog!;
     final lb = widget.unit['lb_custom'] as Map?;
     if (lb == null) return Center(child: Text('preparing', style: Guide.small()));
+    final supportsOwn = cat['ffbeResonance'] != null && widget.unit['ffbe'] != null;
+    final own = (lb['presentation'] ?? (supportsOwn ? 'ffbe' : 'template')) == 'ffbe';
     final finish = (cat['skills'] as List).cast<Map<String, dynamic>>().where((s) => s['attr'] == 'FinishBlow').toList();
     final effById = {for (final e in (cat['effects'] as List).cast<Map<String, dynamic>>()) e['id'] as num: e};
     final templates = (cat['lbTemplates'] as List).cast<Map<String, dynamic>>();
@@ -90,7 +94,7 @@ class _ResonanceStepState extends State<ResonanceStep> {
     final tpl = templates.where((t) => t['id'] == vis).firstOrNull;
     final window = (tpl?['window'] as num?)?.toDouble();
     final stretched = lbSeconds != null && window != null && window > 0 && lbSeconds! > window;
-    if (showTimeline) _loadSeq(app, vis);
+    if (showTimeline && !own) _loadSeq(app, vis);
 
     String autoDesc(Map<String, dynamic>? from, Map<String, dynamic> s) {
       final base = describe(from, s);
@@ -149,7 +153,29 @@ class _ResonanceStepState extends State<ResonanceStep> {
                     Text('In Brave Exvius: ${beLb!['name']}. ${((beLb!['effects'] as List?) ?? []).take(3).join(' ')}', style: Guide.small(), maxLines: 3, overflow: TextOverflow.ellipsis),
                   ],
                 ])),
-                row('Animation', Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                if (supportsOwn || own) row('Presentation', DropdownButtonFormField<String>(
+                  key: ValueKey('presentation-$own'), initialValue: own ? 'ffbe' : 'template', isExpanded: true,
+                  items: const [
+                    DropdownMenuItem(value: 'ffbe', child: Text('Own FFBE limit burst')),
+                    DropdownMenuItem(value: 'template', child: Text('Game sequence (advanced)')),
+                  ],
+                  onChanged: supportsOwn ? (v) { if (v != null) upd({'presentation': v}); } : null,
+                )),
+                if (own) ...[
+                  row('Animation', Text(
+                    'Plays this vision’s full limit-burst motion${lbSeconds != null ? ' (${secs(lbSeconds)})' : ''}, then restores the battle field. FFBE particles and audio are still in development.',
+                    style: Guide.text(),
+                  )),
+                  if (supportsOwn)
+                    row('Field colour', ResonanceFieldColor(
+                      key: ValueKey('field-${widget.unit['key']}'),
+                      value: (lb['field_color'] ?? ResonanceFieldColor.defaultColor).toString(),
+                      onChanged: (v) => upd({'field_color': v}),
+                    ))
+                  else
+                    row('Field colour', Text('Update the local engine to edit and build FFBE Resonances.', style: Guide.small())),
+                ],
+                if (!own) row('Animation', Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   DropdownButtonFormField<num>(
                     key: ValueKey('vis$vis'), initialValue: templates.any((t) => t['id'] == vis) ? vis : null, isExpanded: true,
                     items: [
@@ -178,7 +204,7 @@ class _ResonanceStepState extends State<ResonanceStep> {
                   ),
                   if (showTimeline) ...[const SizedBox(height: 6), _timeline()],
                 ])),
-                if (tpl?['cinematic'] == true)
+                if (!own && tpl?['cinematic'] == true)
                   row('On the targets', Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     DropdownButtonFormField<String>(
                       key: ValueKey('tfx${lb['target_effect']}'), isExpanded: true,
@@ -224,7 +250,7 @@ class _ResonanceStepState extends State<ResonanceStep> {
                       Container(decoration: BoxDecoration(border: Border.all(color: Guide.gold, width: 1.5)), padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), child: Text(t, style: Guide.small(Guide.ink))),
                   ]),
                 ])),
-                row('Caption lines', Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                if (!own) row('Caption lines', Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   DropdownButtonFormField<num>(
                     isExpanded: true,
                     key: ValueKey('cap${lb['caption_from']}'), initialValue: captions.any((s) => s['id'] == lb['caption_from']) ? lb['caption_from'] as num : null,
@@ -250,7 +276,7 @@ class _ResonanceStepState extends State<ResonanceStep> {
             const SizedBox(height: 8),
             UnitAnimPane(unit: widget.unit, initial: 'limitatk', height: 280),
             const SizedBox(height: 8),
-            Text(tpl?['good'] == true
+            Text(own || tpl?['good'] == true
                 ? "This motion plays in the game inside the chosen Resonance sequence${lbSeconds != null ? ' (${secs(lbSeconds)})' : ''}. The arrows show the unit's other motions."
                 : "With the chosen animation this motion is not played; the unit holds a cast pose while the owner's cinematic runs.", style: Guide.small()),
           ]),
