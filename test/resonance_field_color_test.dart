@@ -4,6 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('attack elements blend once each and neutral uses grey', () {
+    expect(ResonanceFieldColor.forElements([]), '#808080');
+    expect(ResonanceFieldColor.forElements(['None']), '#808080');
+    expect(ResonanceFieldColor.forElements(['Ice', 'Thunder']), '#80FF80');
+    expect(ResonanceFieldColor.forElements(['Ice', 'Ice', 'Thunder']), '#80FF80');
+    expect(ResonanceFieldColor.forElements(['Water']), '#5588FF');
+  });
   testWidgets(
     'incomplete edits do not replace the saved colour; presets and custom hex do',
     (tester) async {

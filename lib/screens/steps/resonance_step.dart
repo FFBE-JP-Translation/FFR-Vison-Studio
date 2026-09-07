@@ -22,6 +22,9 @@ class _ResonanceStepState extends State<ResonanceStep> {
   bool _described = false;
   double? lbSeconds; // the unit's own limit-burst motion length
   Map<String, dynamic>? beLb; // Brave Exvius limit burst: name, effects
+  Map<String, dynamic>? lbProfile;
+  String? profileError;
+  int profileRequest = 0;
   bool showTimeline = false;
   Map<String, dynamic>? seq;
   num? seqFor;
@@ -31,6 +34,44 @@ class _ResonanceStepState extends State<ResonanceStep> {
     super.initState();
     if (widget.unit['lb_custom'] == null) WidgetsBinding.instance.addPostFrameCallback((_) => _enable());
     _loadUnitFacts();
+    _loadProfile();
+  }
+
+  @override
+  void didUpdateWidget(covariant ResonanceStep oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if ((oldWidget.unit['ffbe'] as Map?)?['id'] != (widget.unit['ffbe'] as Map?)?['id']) {
+      lbSeconds = null; beLb = null; _described = false;
+      _loadUnitFacts();
+    }
+    if (oldWidget.unit['key'] != widget.unit['key'] ||
+        (oldWidget.unit['ffbe'] as Map?)?['id'] != (widget.unit['ffbe'] as Map?)?['id'] ||
+        (oldWidget.unit['lb_custom'] as Map?)?['ffbe_lb_id'] != (widget.unit['lb_custom'] as Map?)?['ffbe_lb_id']) {
+      _loadProfile();
+    }
+  }
+
+  Future<void> _loadProfile() async {
+    final request = ++profileRequest;
+    lbProfile = null; profileError = null;
+    final app = context.read<AppState>();
+    final ff = widget.unit['ffbe'] as Map?;
+    final form = ff?['id']?.toString();
+    if (form == null || (app.catalog?['ffbeResonance'] as Map?)?['lbProfiles'] != true) return;
+    try {
+      final profile = await app.api!.ffbeLb(form,
+          lbId: (widget.unit['lb_custom'] as Map?)?['ffbe_lb_id']?.toString(), source: (ff?['source'] ?? 'JP').toString());
+      if (!mounted || request != profileRequest) return;
+      setState(() => lbProfile = profile);
+      final lb = widget.unit['lb_custom'] as Map?;
+      if (lb != null && (lb['presentation'] ?? 'ffbe') == 'ffbe' &&
+          (lb['mechanics'] ?? 'ffbe') == 'ffbe' && profile['supported'] == true) {
+        widget.set({'lb_custom': {...lb, 'set': profile['set'],
+          if (lb['descAuto'] != false) 'desc': profile['description']}});
+      }
+    } catch (_) {
+      if (mounted && request == profileRequest) setState(() => profileError = 'Could not read this LB. Check the local engine and retry.');
+    }
   }
 
   Future<void> _loadUnitFacts() async {
@@ -56,8 +97,8 @@ class _ResonanceStepState extends State<ResonanceStep> {
     final u = widget.unit;
     final own = context.read<AppState>().catalog?['ffbeResonance'] != null && u['ffbe'] != null;
     widget.set({'lb_custom': {
-      'presentation': own ? 'ffbe' : 'template', 'field_color': ResonanceFieldColor.defaultColor,
-      'from': 414090, 'visuals': 440110, 'target_effect': null, 'clone_sequence': true, 'mute': ['VO_'], 'caption_from': 440260,
+      'presentation': own ? 'ffbe' : 'template', 'field_color_mode': 'element', 'audio': 'disabled', 'mechanics': 'ffbe',
+      'from': 440110, 'visuals': 440110, 'target_effect': null, 'clone_sequence': true, 'mute': ['VO_'], 'caption_from': 440260,
       'jp': '${u['jp']}_LB', 'en': "${u['en']}'s Resonance",
       'desc': '', 'descAuto': true, 'set': {'element': 'None'},
       'sequence_edits': {}, 'effect_swaps': [],
@@ -72,6 +113,8 @@ class _ResonanceStepState extends State<ResonanceStep> {
     if (lb == null) return Center(child: Text('preparing', style: Guide.small()));
     final supportsOwn = cat['ffbeResonance'] != null && widget.unit['ffbe'] != null;
     final own = (lb['presentation'] ?? (supportsOwn ? 'ffbe' : 'template')) == 'ffbe';
+    final autoMechanics = own && (lb['mechanics'] ?? 'ffbe') == 'ffbe';
+    final autoColor = (lb['field_color_mode'] ?? 'element') == 'element';
     final finish = (cat['skills'] as List).cast<Map<String, dynamic>>().where((s) => s['attr'] == 'FinishBlow').toList();
     final effById = {for (final e in (cat['effects'] as List).cast<Map<String, dynamic>>()) e['id'] as num: e};
     final templates = (cat['lbTemplates'] as List).cast<Map<String, dynamic>>();
@@ -89,6 +132,8 @@ class _ResonanceStepState extends State<ResonanceStep> {
     final kind = isDamage(mech) ? 'damage' : healing.contains(mech) ? 'heal' : buffing.contains(mech) ? 'buff' : 'debuff';
     final st = Map<String, dynamic>.from((lb['set'] as Map?) ?? {});
     final element = (st['element'] ?? mech['element'] ?? 'None').toString();
+    final fieldColor = autoMechanics ? (lbProfile?['fieldColor'] ?? ResonanceFieldColor.defaultColor).toString()
+        : ResonanceFieldColor.forElements([element]);
     final physical = (st['DamageType'] ?? mech['dmgType']) == 'Physic';
     final vis = (lb['visuals'] ?? lb['from']) as num;
     final tpl = templates.where((t) => t['id'] == vis).firstOrNull;
@@ -103,7 +148,15 @@ class _ResonanceStepState extends State<ResonanceStep> {
     }
     void upd(Map<String, dynamic> patch) {
       final n = {...lb, ...patch};
-      if (n['descAuto'] != false) n['desc'] = autoDesc(finish.where((s) => s['id'] == n['from']).firstOrNull, Map<String, dynamic>.from((n['set'] as Map?) ?? {}));
+      final fromLb = own && (n['mechanics'] ?? 'ffbe') == 'ffbe';
+      if (fromLb && lbProfile?['supported'] == true && !patch.containsKey('ffbe_lb_id')) n['set'] = lbProfile!['set'];
+      if (n['descAuto'] != false) {
+        if (fromLb) {
+          if (lbProfile?['supported'] == true && !patch.containsKey('ffbe_lb_id')) n['desc'] = lbProfile!['description'];
+        } else {
+          n['desc'] = autoDesc(finish.where((s) => s['id'] == n['from']).firstOrNull, Map<String, dynamic>.from((n['set'] as Map?) ?? {}));
+        }
+      }
       widget.set({'lb_custom': n});
     }
     // Units arrive from the engine with a bare default; write the description once so the entry reads like the others.
@@ -166,13 +219,48 @@ class _ResonanceStepState extends State<ResonanceStep> {
                     'Plays this vision’s full limit-burst motion${lbSeconds != null ? ' (${secs(lbSeconds)})' : ''}, then restores the battle field. FFBE particles and audio are still in development.',
                     style: Guide.text(),
                   )),
-                  if (supportsOwn)
-                    row('Field colour', ResonanceFieldColor(
+                  if (supportsOwn) ...[
+                    row('Mechanics', DropdownButtonFormField<String>(
+                      key: ValueKey('mechanics-$autoMechanics'), initialValue: autoMechanics ? 'ffbe' : 'custom',
+                      items: const [DropdownMenuItem(value: 'ffbe', child: Text('Use imported LB data')),
+                        DropdownMenuItem(value: 'custom', child: Text('Custom mechanics (advanced)'))],
+                      onChanged: (v) { if (v != null) upd({'mechanics': v}); },
+                    )),
+                    if (lbProfile != null) ...[
+                      if (((lbProfile!['variants'] as List?) ?? []).length > 1)
+                        row('LB variant', DropdownButtonFormField<String>(
+                          key: ValueKey('variant-${lbProfile!['lbId']}'), initialValue: lbProfile!['lbId'].toString(), isExpanded: true,
+                          items: [for (final v in lbProfile!['variants'] as List)
+                            DropdownMenuItem(value: v['id'].toString(), child: Text('${(v['elements'] as List).join(' / ')} · ${v['id']}'))],
+                          onChanged: (v) { if (v != null) upd({'ffbe_lb_id': v}); },
+                        )),
+                      if (autoMechanics && lbProfile!['supported'] == true) ...[
+                        row('LB data', Text('${lbProfile!['target']} · ${lbProfile!['hits']} hits · ${(lbProfile!['elements'] as List).isEmpty ? 'Non-elemental' : (lbProfile!['elements'] as List).join(' / ')}', style: Guide.text())),
+                        row('Power', Text('Cloud’s total resonance power (${lbProfile!['totalPower']}), split across the LB’s hit weights. Includes Cloud’s level scaling and critical bonus.', style: Guide.small())),
+                        row('Movement', Text('FFBE move type ${(lbProfile!['movement'] as Map?)?['type']}; LB offset ${(lbProfile!['movement'] as Map?)?['lbOffset'] ?? 'unavailable — native spacing'}.', style: Guide.small())),
+                      ],
+                      for (final issue in [...(lbProfile!['issues'] as List? ?? []), ...(lbProfile!['warnings'] as List? ?? [])])
+                        Text(issue.toString(), style: Guide.small(Guide.red)),
+                    ] else ...[
+                      Text(profileError ?? ((cat['ffbeResonance'] as Map?)?['lbProfiles'] == true ? 'Reading LB targeting and hit data…' : 'Update the local engine to resolve LB mechanics.'), style: Guide.small()),
+                      if (profileError != null) TextButton(onPressed: _loadProfile, child: const Text('Retry')),
+                    ],
+                    row('Field colour', Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      DropdownButtonFormField<String>(
+                        key: ValueKey('color-mode-$autoColor'), initialValue: autoColor ? 'element' : 'custom',
+                        items: const [DropdownMenuItem(value: 'element', child: Text('Match attack element')),
+                          DropdownMenuItem(value: 'custom', child: Text('Custom colour'))],
+                        onChanged: (v) { if (v != null) upd({'field_color_mode': v, if (v == 'custom' && lb['field_color'] == null) 'field_color': fieldColor}); },
+                      ),
+                      const SizedBox(height: 8),
+                      if (autoColor) Row(children: [Container(width: 20, height: 20, color: Color(int.parse('FF${fieldColor.substring(1)}', radix: 16))), const SizedBox(width: 8), Expanded(child: Text('$fieldColor · Grey for no element; multiple elements blend equally.', style: Guide.small()))])
+                      else ResonanceFieldColor(
                       key: ValueKey('field-${widget.unit['key']}'),
                       value: (lb['field_color'] ?? ResonanceFieldColor.defaultColor).toString(),
                       onChanged: (v) => upd({'field_color': v}),
-                    ))
-                  else
+                      ),
+                    ])),
+                  ] else
                     row('Field colour', Text('Update the local engine to edit and build FFBE Resonances.', style: Guide.small())),
                 ],
                 if (!own) row('Animation', Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -215,6 +303,7 @@ class _ResonanceStepState extends State<ResonanceStep> {
                     const SizedBox(height: 4),
                     Text("What appears on the enemies or allies when the Resonance lands. The owner's own slashes are left out unless you pick them back.", style: Guide.small()),
                   ])),
+                if (!autoMechanics) ...[
                 row('It is', Choice<String>(
                   options: const [('damage', 'a damaging ability'), ('heal', 'a healing ability'), ('buff', 'a buffing ability'), ('debuff', 'a debuffing ability')],
                   value: kind, onChanged: setKind,
@@ -250,6 +339,7 @@ class _ResonanceStepState extends State<ResonanceStep> {
                       Container(decoration: BoxDecoration(border: Border.all(color: Guide.gold, width: 1.5)), padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), child: Text(t, style: Guide.small(Guide.ink))),
                   ]),
                 ])),
+                ],
                 if (!own) row('Caption lines', Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   DropdownButtonFormField<num>(
                     isExpanded: true,

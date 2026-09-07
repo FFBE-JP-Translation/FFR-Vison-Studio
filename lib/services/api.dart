@@ -39,6 +39,11 @@ class Api {
   Future<List<dynamic>> ffbeUnits() async => (await get('/api/ffbe/units')) as List<dynamic>;
   Future<void> rebuildFfbeIndex() => post('/api/ffbe/units/rebuild');
   Future<Map<String, dynamic>> ffbeUnit(String id) async => (await get('/api/ffbe/unit/$id')) as Map<String, dynamic>;
+  Future<Map<String, dynamic>> ffbeLb(String form, {String? lbId, String source = 'JP'}) async {
+    final query = {'source': source};
+    if (lbId != null) query['lb_id'] = lbId;
+    return (await get('/api/ffbe/lb/${Uri.encodeComponent(form)}?${Uri(queryParameters: query).query}')) as Map<String, dynamic>;
+  }
   Future<void> setup(String game) => post('/api/setup', {'game': game});
   Future<Map<String, dynamic>> setupLog() async => (await get('/api/setup/log')) as Map<String, dynamic>;
   Future<void> build({required bool install}) => post('/api/build', {'install': install});

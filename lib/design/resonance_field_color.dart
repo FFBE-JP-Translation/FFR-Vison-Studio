@@ -13,9 +13,24 @@ class ResonanceFieldColor extends StatefulWidget {
   final String value;
   final ValueChanged<String> onChanged;
 
-  static const defaultColor = '#FFAA33';
+  static const defaultColor = '#808080';
+  static const elementColors = {
+    'Fire': '#EE5555', 'Ice': '#00FFFF', 'Thunder': '#FFFF00',
+    'Water': '#5588FF', 'Wind': '#55CC88', 'Earth': '#B88A55',
+    'Light': '#FFF2CC', 'Dark': '#9955CC',
+  };
+  static String forElements(Iterable<String> elements) {
+    final colors = elements.toSet().where(elementColors.containsKey)
+        .map((e) => int.parse(elementColors[e]!.substring(1), radix: 16)).toList();
+    if (colors.isEmpty) return defaultColor;
+    final channels = [16, 8, 0].map((shift) =>
+        (colors.fold<int>(0, (sum, c) => sum + ((c >> shift) & 255)) / colors.length)
+            .round().toRadixString(16).padLeft(2, '0'));
+    return '#${channels.join().toUpperCase()}';
+  }
   static const presets = {
-    'Orange': defaultColor,
+    'Grey': defaultColor,
+    'Orange': '#FFAA33',
     'Blue': '#5588FF',
     'Violet': '#AA66EE',
     'Green': '#55CC88',
@@ -134,7 +149,7 @@ class _ResonanceFieldColorState extends State<ResonanceFieldColor> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Tints the battle during this vision’s limit burst. Lighting affects the final colour. Orange is the default.',
+          'Tints the battle during this vision’s limit burst. Lighting affects the final colour.',
           style: Guide.small(),
         ),
       ],
