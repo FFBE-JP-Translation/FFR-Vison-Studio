@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -11,6 +12,8 @@ import 'package:path/path.dart' as p;
 class Downloader {
   Downloader(this.baseUrl);
   final String baseUrl;
+  final Map<String, Future<File>> _pending = {};
+  Future<void> _queue = Future<void>.value();
 
   Uri _u(String rel) => rel.startsWith('http') ? Uri.parse(rel) : Uri.parse(baseUrl.endsWith('/') ? '$baseUrl$rel' : '$baseUrl/$rel');
 
@@ -47,26 +50,41 @@ class Downloader {
 
   /// Downloads `rel` to `dest`, reporting (received, total). Verifies sha256 when given. A broken connection, a 429 or a
   /// 5xx is retried (up to six tries, backing off) and resumes where it stopped (`.part` file + Range request).
-  Future<File> download(String rel, String dest, {String? sha256, void Function(int, int)? onProgress}) async {
+  Future<File> download(String rel, String dest, {String? sha256, void Function(int, int)? onProgress}) {
+    final key = '${p.normalize(p.absolute(dest))}|$sha256';
+    return _pending.putIfAbsent(key, () {
+      // A burst of selections shares downloads and waits its turn, including
+      // Retry-After. No concurrent writers to .part files or retry storms.
+      final job = _queue.then((_) => _download(rel, dest, sha256: sha256, onProgress: onProgress));
+      _queue = job.then<void>((_) {}, onError: (Object error, StackTrace stack) {});
+      return job.whenComplete(() { _pending.remove(key); });
+    });
+  }
+
+  Future<File> _download(String rel, String dest, {String? sha256, void Function(int, int)? onProgress}) async {
     final f = File(dest);
     if (f.existsSync() && sha256 != null && await _sha256(f) == sha256) return f;
     f.parent.createSync(recursive: true);
-    final part = File('$dest.part');
+    final part = File(sha256 == null ? '$dest.part' : '$dest.$sha256.part');
+    if (sha256 != null) {
+      final uri = Uri.parse(rel);
+      rel = uri.replace(queryParameters: {...uri.queryParameters, 'v': sha256}).toString();
+    }
     Object? last;
     var wait = const Duration(seconds: 1);
     for (var attempt = 0; attempt < 6; attempt++) {
       try {
         wait = Duration(seconds: 1 << attempt);
         await _fetch(rel, part, onProgress, onWait: (d) => wait = d);
-        if (f.existsSync()) f.deleteSync();
-        part.renameSync(f.path);
         if (sha256 != null) {
-          final h = await _sha256(f);
+          final h = await _sha256(part);
           if (h != sha256) {
-            f.deleteSync();
+            part.deleteSync();
             throw const FormatException('the downloaded file is damaged (checksum mismatch); try again');
           }
         }
+        if (f.existsSync()) f.deleteSync();
+        part.renameSync(f.path);
         return f;
       } on FormatException {
         rethrow;
@@ -91,7 +109,9 @@ class Downloader {
       if (res.statusCode == 200) {
         have = 0; // the host ignored the range: start over
       } else if (res.statusCode == 416) {
-        return; // nothing left to fetch
+        // A stale oversized partial is not evidence of a complete download.
+        if (part.existsSync()) part.deleteSync();
+        throw const HttpException('The partial download needs to restart');
       } else if (res.statusCode != 206) {
         if (transient(res.statusCode)) onWait?.call(backoff(2, res.headers));
         throw HttpException('$rel: HTTP ${res.statusCode}${res.statusCode == 429 ? ' (the host is busy)' : ''}');

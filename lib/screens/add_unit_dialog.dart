@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -21,6 +22,8 @@ class _AddUnitDialogState extends State<AddUnitDialog> {
   Map<String, dynamic>? sel;
   Map<String, dynamic>? detail;
   String q = '';
+  final selectedCategories = <String>{};
+  File? idlePreview;
   String form = '';
   final name = TextEditingController();
   bool busy = false;
@@ -46,11 +49,11 @@ class _AddUnitDialogState extends State<AddUnitDialog> {
   /// Select a unit: read its record, pick the best look that has a sprite pack, fetch that pack, then show the animations.
   Future<void> pick(Map<String, dynamic> u) async {
     final seq = ++_pickSeq;
-    setState(() { sel = u; detail = null; err = null; loadingAssets = true; });
+    setState(() { sel = u; detail = null; idlePreview = null; err = null; loadingAssets = true; });
     final app = context.read<AppState>();
     try {
-      var d = await app.api!.ffbeUnit(u['id'] as String);
-      if (seq != _pickSeq) return;
+      var d = (u['previewDetail'] as Map<String, dynamic>?) ?? await app.api!.ffbeUnit(u['id'] as String);
+      if (!mounted || seq != _pickSeq) return;
       final forms = (d['forms'] as Map?)?.keys.map((k) => k.toString()).toList() ?? [];
       final packs = ((u['packs'] as List?) ?? []).map((e) => e.toString()).toSet();
       final prefer = forms.where(packs.contains).toList();
@@ -58,16 +61,23 @@ class _AddUnitDialogState extends State<AddUnitDialog> {
       final f = plain.isNotEmpty ? plain.last : prefer.isNotEmpty ? prefer.last : (d['maxForm']?.toString() ?? u['id'] as String);
       setState(() { detail = d; form = f; name.text = (d['name'] as String?) ?? (u['name'] as String? ?? ''); });
       if (packs.contains(f)) {
+        try {
+          final idle = await app.ensureIdle(f);
+          if (!mounted || seq != _pickSeq) return;
+          setState(() => idlePreview = idle);
+        } catch (_) { /* The full bundle also contains idle. */ }
+        if (!mounted || seq != _pickSeq) return;
         await app.ensureSprites(f);
+        if (!mounted || seq != _pickSeq) return;
         final base = ((d['forms'] as Map?)?[f] as Map?)?['shift']?['base']?.toString();
         if (base != null && packs.contains(base)) await app.ensureSprites(base); // a shifted look borrows its victory from the base form
-        if (seq != _pickSeq) return;
+        if (!mounted || seq != _pickSeq) return;
         d = await app.api!.ffbeUnit(u['id'] as String); // now with the animation list for the fetched look
-        if (seq != _pickSeq) return;
+        if (!mounted || seq != _pickSeq) return;
         setState(() => detail = d);
       }
     } catch (e) {
-      if (seq == _pickSeq) setState(() => err = e.toString());
+      if (mounted && seq == _pickSeq) setState(() => err = e.toString());
     } finally {
       if (seq == _pickSeq && mounted) setState(() => loadingAssets = false);
     }
@@ -77,18 +87,25 @@ class _AddUnitDialogState extends State<AddUnitDialog> {
   Future<void> setForm(String f) async {
     final app = context.read<AppState>();
     final packs = ((sel!['packs'] as List?) ?? []).map((e) => e.toString()).toSet();
-    setState(() { form = f; loadingAssets = packs.contains(f); });
+    final seq = ++_pickSeq;
+    setState(() { form = f; idlePreview = null; err = null; loadingAssets = packs.contains(f); });
     if (!packs.contains(f)) return;
-    final seq = _pickSeq;
     try {
+      try {
+        final idle = await app.ensureIdle(f);
+        if (!mounted || seq != _pickSeq) return;
+        setState(() => idlePreview = idle);
+      } catch (_) { /* Continue with the full bundle. */ }
+      if (!mounted || seq != _pickSeq) return;
       await app.ensureSprites(f);
+      if (!mounted || seq != _pickSeq) return;
       final base = ((detail?['forms'] as Map?)?[f] as Map?)?['shift']?['base']?.toString();
       if (base != null && packs.contains(base)) await app.ensureSprites(base);
-      if (seq != _pickSeq) return;
+      if (!mounted || seq != _pickSeq) return;
       final d = await app.api!.ffbeUnit(sel!['id'] as String);
-      if (seq == _pickSeq) setState(() => detail = d);
+      if (mounted && seq == _pickSeq) setState(() => detail = d);
     } catch (e) {
-      if (seq == _pickSeq) setState(() => err = e.toString());
+      if (mounted && seq == _pickSeq) setState(() => err = e.toString());
     } finally {
       if (seq == _pickSeq && mounted) setState(() => loadingAssets = false);
     }
@@ -98,7 +115,11 @@ class _AddUnitDialogState extends State<AddUnitDialog> {
   Widget build(BuildContext context) {
     final app = context.read<AppState>();
     final s = q.trim().toLowerCase();
-    final shown = (s.isEmpty ? list : list.where((u) => (u['name'] ?? '').toString().toLowerCase().contains(s) || (u['jpname'] ?? '').toString().contains(s) || (u['id'] ?? '').toString().startsWith(s))).take(200).toList();
+    final matches = list.where((u) => matchesUnitSearch(u, s, selectedCategories)).toList();
+    final shown = matches;
+    final categoryLabels = (app.hostIndex?['categories'] as Map?) ?? {};
+    final availableCategories = list.expand((u) => (u['categories'] as List?) ?? []).map((v) => v.toString()).toSet().where(categoryLabels.containsKey).toList()
+      ..sort((a, b) => categoryLabels[a]['name'].toString().compareTo(categoryLabels[b]['name'].toString()));
     final inMod = app.units.map((u) => (u as Map)['ffbe']?['base']?.toString()).toSet();
     final packs = sel == null ? <String>{} : ((sel!['packs'] as List?) ?? []).map((e) => e.toString()).toSet();
     final hasPack = packs.contains(form);
@@ -116,7 +137,20 @@ class _AddUnitDialogState extends State<AddUnitDialog> {
               child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                    TextField(autofocus: true, decoration: InputDecoration(hintText: 'Search by name', suffixText: '${list.length} units'), onChanged: (v) => setState(() => q = v), onSubmitted: (_) { if (shown.isNotEmpty) pick(shown.first); }),
+                    TextField(autofocus: true, decoration: InputDecoration(hintText: 'Search by name', suffixText: '${matches.length} units'), onChanged: (v) => setState(() => q = v), onSubmitted: (_) { if (shown.isNotEmpty) pick(shown.first); }),
+                    if (availableCategories.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        key: ValueKey(selectedCategories.join(',')),
+                        isExpanded: true,
+                        decoration: const InputDecoration(hintText: 'Filter by category'),
+                        items: [for (final id in availableCategories.where((id) => !selectedCategories.contains(id)))
+                          DropdownMenuItem(value: id, child: Text(categoryLabels[id]['name'].toString(), overflow: TextOverflow.ellipsis))],
+                        onChanged: (id) { if (id != null) setState(() => selectedCategories.add(id)); },
+                      ),
+                      if (selectedCategories.isNotEmpty) Wrap(spacing: 4, children: [for (final id in selectedCategories)
+                        InputChip(label: Text(categoryLabels[id]['name'].toString()), onDeleted: () => setState(() => selectedCategories.remove(id)))]),
+                    ],
                     const SizedBox(height: 8),
                     Expanded(
                       child: Box(
@@ -258,6 +292,8 @@ class _AddUnitDialogState extends State<AddUnitDialog> {
         initial: 'idle',
         height: 210,
         loading: loadingAssets,
+        idlePreview: idlePreview,
+        loadingText: idlePreview == null ? 'Loading idle animation' : 'Downloading unit data and sounds…',
         emptyText: hasPack ? 'No animations for this look.' : 'No sprite pack for this look is on the host yet.',
       ),
       const SizedBox(height: 10),

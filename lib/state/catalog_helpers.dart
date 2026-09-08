@@ -1,6 +1,15 @@
 /// Plain-language readings of the engine's catalog rows, mirroring tools/devui/web/src/api.ts `describe` and Easy.tsx.
 const cgResonanceIds = {440010, 440090, 440110};
 
+bool matchesUnitSearch(Map<String, dynamic> unit, String query, Set<String> categories) {
+  final text = query.trim().toLowerCase();
+  final tags = ((unit['categories'] as List?) ?? []).map((v) => v.toString()).toSet();
+  return categories.every(tags.contains) && (text.isEmpty ||
+      (unit['name'] ?? '').toString().toLowerCase().contains(text) ||
+      (unit['jpname'] ?? '').toString().contains(text) ||
+      (unit['id'] ?? '').toString().startsWith(text));
+}
+
 Map<String, dynamic> migrateCgResonance(Map<String, dynamic> unit) {
   final lb = unit['lb_custom'] as Map?;
   if (unit['ffbe'] != null && lb != null &&

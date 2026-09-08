@@ -4,6 +4,14 @@ FFR Vision Studio, the Windows app. The product is 1.0.0 while the first release
 build (`1.0.0.<build>` in file names, the manifest and the app's own version check). Engine changes are listed when the app
 needs them.
 
+## 1.0.0 build 13 — local testing
+
+- Category filters can be combined with unit-name searches.
+- Idle previews load before the unit's `.ffr` bundle, while kits and sounds download.
+- Shared sound caching and a single download queue reduce repeated requests and 429 retry bursts.
+- Icon/common packs refresh by checksum, and incomplete unit downloads can be retried.
+- New resonance names use the engine's English LB translations; automatic names follow LB variants.
+
 ## 1.0.0 build 7 — 2026-09-06
 
 - The host answered with 429 (too many requests) and 404s once many people used the app at the same time. The add-unit

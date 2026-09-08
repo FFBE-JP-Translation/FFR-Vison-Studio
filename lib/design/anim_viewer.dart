@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 
 import 'theme.dart';
@@ -12,7 +13,8 @@ String animName(String a) => const {
 /// One framed picture of the game: the unit's animation, with arrows to step through the others and the animation's
 /// name under it. `anims` empty = still loading; `url(anim)` gives the engine's animated WebP.
 class AnimViewer extends StatefulWidget {
-  const AnimViewer({super.key, required this.anims, required this.url, this.initial, this.height = 200, this.loading = false, this.loadingText = 'loading the assets', this.emptyText = 'No sprites for this look yet.', this.onChanged});
+  const AnimViewer({super.key, required this.anims, required this.url, this.initial, this.height = 200, this.loading = false, this.loadingText = 'loading the assets', this.emptyText = 'No sprites for this look yet.', this.onChanged, this.idlePreview});
+  final File? idlePreview;
   final List<String> anims;
   final String Function(String anim) url;
   final String? initial;
@@ -54,7 +56,9 @@ class _AnimViewerState extends State<AnimViewer> {
       height: widget.height,
       child: Stack(children: [
         Positioned.fill(
-          child: widget.loading
+          child: widget.loading && widget.idlePreview != null
+              ? Padding(padding: const EdgeInsets.fromLTRB(36, 8, 36, 26), child: Image.file(widget.idlePreview!, fit: BoxFit.contain, filterQuality: FilterQuality.none))
+              : widget.loading
               ? Center(child: Row(mainAxisSize: MainAxisSize.min, children: [
                   SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Guide.ink)),
                   const SizedBox(width: 10),
@@ -75,11 +79,13 @@ class _AnimViewerState extends State<AnimViewer> {
                       ),
                     ),
         ),
-        if (has && widget.anims.length > 1) ...[
+        if (widget.loading && widget.idlePreview != null)
+          Positioned(left: 8, right: 8, bottom: 6, child: Text(widget.loadingText, textAlign: TextAlign.center, style: Guide.small())),
+        if (!widget.loading && has && widget.anims.length > 1) ...[
           Positioned(left: 4, top: 0, bottom: 0, child: Center(child: _arrow(Icons.chevron_left, () => step(-1)))),
           Positioned(right: 4, top: 0, bottom: 0, child: Center(child: _arrow(Icons.chevron_right, () => step(1)))),
         ],
-        if (has)
+        if (has && !widget.loading)
           Positioned(
             left: 0, right: 0, bottom: 6,
             child: Center(

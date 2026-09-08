@@ -10,6 +10,7 @@ import '../services/downloader.dart';
 import '../services/engine.dart';
 import '../services/game_locator.dart';
 import '../services/paths.dart';
+import '../services/unit_assets.dart';
 import '../version.dart';
 import 'catalog_helpers.dart';
 
@@ -32,6 +33,7 @@ class AppState extends ChangeNotifier {
   final String hostBase;
   final paths = AppPaths.resolve();
   late final Downloader dl = Downloader(hostBase);
+  late final UnitAssets unitAssets = UnitAssets(downloader: dl, dataDir: p.join(paths.engineData, 'ffbe'), downloadDir: paths.downloads);
   Engine? engine;
   Api? api;
 
@@ -42,6 +44,7 @@ class AppState extends ChangeNotifier {
     Progress('Download the game-side data'),
     Progress('Download the Brave Exvius tables'),
     Progress('Download the unit icons'),
+    Progress('Download shared resonance sounds'),
     Progress('Start the engine'),
   ];
   String? gameRoot;
@@ -116,9 +119,9 @@ class AppState extends ChangeNotifier {
               if (optional) { s.state = 'done'; s.detail = 'not on this host'; notifyListeners(); return; }
               throw StateError('the host has no "$name" pack');
             }
-            final ptag = (info['version'] ?? tag).toString();
+            final ptag = (info['sha256'] ?? info['version'] ?? tag).toString();
             if (installed[name] == ptag && Directory(into).existsSync()) {
-              s.state = 'done'; s.detail = 'version ${_pretty(ptag)}'; notifyListeners(); return;
+              s.state = 'done'; s.detail = 'up to date'; notifyListeners(); return;
             }
             s.state = 'working'; notifyListeners();
             final dest = p.join(paths.downloads, p.basename(info['url'] as String));
@@ -130,22 +133,23 @@ class AppState extends ChangeNotifier {
             s.detail = 'unpacking'; s.fraction = null; notifyListeners();
             await Downloader.unzip(f, into);
             installed[name] = ptag; _writeInstalled(installed);
-            s.state = 'done'; s.detail = 'version ${_pretty(ptag)}'; notifyListeners();
+            s.state = 'done'; s.detail = 'up to date'; notifyListeners();
           }
           await pack(0, 'engine', paths.engineDir);
           await pack(1, 'base', paths.engineData);
           await pack(2, 'tables', p.join(paths.engineData, 'ffbe'));
           await pack(3, 'icons', paths.icons, optional: true);
+          await pack(4, 'common', p.join(paths.engineData, 'ffbe'), optional: true);
         }
-        try {
+        if (!tooNew) { try {
           hostIndex = await dl.json_('ffbe/index.json');
           File(p.join(paths.root, 'ffbe_index_cache.json')).writeAsStringSync(json.encode(hostIndex));
-        } catch (_) {}
+        } catch (_) {} }
       }
       if (hostIndex == null) {
         try { hostIndex = json.decode(File(p.join(paths.root, 'ffbe_index_cache.json')).readAsStringSync()) as JsonMap; } catch (_) {}
       }
-      await _startEngine(bootSteps[4]);
+      await _startEngine(bootSteps[5]);
       gameRoot ??= await GameLocator.detect();
       final st = await api!.status();
       phase = (st['setupNeeded'] == true) ? Phase.setup : Phase.ready;
@@ -160,15 +164,10 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  String _pretty(String tag) {
-    final parts = tag.split('.');
-    return parts.length == 4 ? '${parts.take(3).join('.')} build ${parts[3]}' : tag;
-  }
-
   void _markInstalled(Map<String, dynamic> installed) {
-    for (final (i, name) in ['engine', 'base', 'tables', 'icons'].indexed) {
+    for (final (i, name) in ['engine', 'base', 'tables', 'icons', 'common'].indexed) {
       bootSteps[i].state = 'done';
-      bootSteps[i].detail = installed[name] == null ? (name == 'icons' ? 'not downloaded yet' : '?') : 'installed ${_pretty(installed[name].toString())}';
+      bootSteps[i].detail = installed[name] == null ? 'not downloaded yet' : 'installed';
     }
     notifyListeners();
   }
@@ -197,7 +196,7 @@ class AppState extends ChangeNotifier {
   /// After the engine stopped on its own: start it again and reload everything.
   Future<void> restartEngine() async {
     try {
-      await _startEngine(bootSteps[4]);
+      await _startEngine(bootSteps[5]);
       if (phase == Phase.ready) await loadAll();
       showNotice('The engine is back.');
     } catch (e) {
@@ -324,21 +323,21 @@ class AppState extends ChangeNotifier {
   /// Makes sure a form's sprite pack is on this machine: downloads it from its shard and lets the engine index it.
   /// A pack counts as present only when its sheet, its parts file and the completion marker are all there.
   Future<void> ensureSprites(String form, {void Function(String)? onStep}) async {
-    final spriteDir = p.join(paths.engineSprites, form);
-    final complete = File(p.join(spriteDir, '.complete')).existsSync() ||
-        (File(p.join(spriteDir, 'unit_anime_$form.png')).existsSync() && File(p.join(spriteDir, 'unit_cgg_$form.csv')).existsSync());
-    if (complete) return;
-    final forms = (hostIndex?['forms'] as JsonMap?) ?? {};
+    final forms = (hostIndex?['unitBundles'] as JsonMap?) ?? (hostIndex?['forms'] as JsonMap?) ?? {};
     final info = forms[form] as JsonMap?;
+    if (info == null && File(p.join(paths.engineSprites, form, '.complete')).existsSync() &&
+        File(p.join(paths.engineSprites, form, 'unit_anime_$form.png')).existsSync() &&
+        File(p.join(paths.engineSprites, form, 'unit_cgg_$form.csv')).existsSync()) { return; }
     if (info == null) throw StateError(banner != null && banner!.startsWith('Could not reach') ? 'the sprites for this look are not on this machine and the download host is unreachable' : 'no sprite pack for form $form is available on the host yet');
-    onStep?.call('downloading the sprites');
-    final f = await dl.download(info['url'] as String, p.join(paths.downloads, '$form.zip'), sha256: info['sha256'] as String?);
-    await Downloader.unzip(f, spriteDir);
-    if (!File(p.join(spriteDir, 'unit_anime_$form.png')).existsSync()) throw StateError('the sprite pack for $form is incomplete');
-    File(p.join(spriteDir, '.complete')).writeAsStringSync(DateTime.now().toIso8601String());
-    onStep?.call('indexing');
-    await api!.rebuildFfbeIndex();
-    _anims.remove(form);
+    await unitAssets.ensure(form, info, onStep: onStep, onIndexed: () async {
+      await api!.rebuildFfbeIndex();
+      _anims.remove(form);
+    });
+  }
+
+  Future<File?> ensureIdle(String form) async {
+    final info = ((hostIndex?['unitBundles'] ?? hostIndex?['forms']) as JsonMap?)?[form] as JsonMap?;
+    return info == null ? null : unitAssets.idle(form, info);
   }
 
   /// Animation names for a form, from the engine, cached.

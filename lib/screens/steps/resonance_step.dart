@@ -19,6 +19,7 @@ class ResonanceStep extends StatefulWidget {
 }
 
 class _ResonanceStepState extends State<ResonanceStep> {
+  final nameController = TextEditingController();
   bool _described = false;
   double? lbSeconds; // the unit's own limit-burst motion length
   Map<String, dynamic>? beLb; // Brave Exvius limit burst: name, effects
@@ -32,6 +33,7 @@ class _ResonanceStepState extends State<ResonanceStep> {
   @override
   void initState() {
     super.initState();
+    nameController.text = (widget.unit['lb_custom']?['en'] ?? '').toString();
     if (widget.unit['lb_custom'] == null) WidgetsBinding.instance.addPostFrameCallback((_) => _enable());
     _loadUnitFacts();
     _loadProfile();
@@ -40,6 +42,10 @@ class _ResonanceStepState extends State<ResonanceStep> {
   @override
   void didUpdateWidget(covariant ResonanceStep oldWidget) {
     super.didUpdateWidget(oldWidget);
+    final currentName = (widget.unit['lb_custom']?['en'] ?? '').toString();
+    if (nameController.text != currentName) {
+      nameController.value = TextEditingValue(text: currentName, selection: TextSelection.collapsed(offset: currentName.length));
+    }
     if ((oldWidget.unit['ffbe'] as Map?)?['id'] != (widget.unit['ffbe'] as Map?)?['id']) {
       lbSeconds = null; beLb = null; _described = false;
       _loadUnitFacts();
@@ -67,6 +73,7 @@ class _ResonanceStepState extends State<ResonanceStep> {
       if (lb != null && (lb['presentation'] ?? 'ffbe') == 'ffbe' &&
           (lb['mechanics'] ?? 'ffbe') == 'ffbe' && profile['supported'] == true) {
         widget.set({'lb_custom': {...lb, 'set': profile['set'],
+          if (lb['nameAuto'] == true && profile['name'] != null) 'en': profile['name'],
           if (lb['descAuto'] != false) 'desc': profile['description']}});
       }
     } catch (_) {
@@ -100,7 +107,7 @@ class _ResonanceStepState extends State<ResonanceStep> {
       'presentation': own ? 'ffbe' : 'template', 'field_color_mode': 'element',
       'audio': own ? 'native' : 'disabled', 'audio_codec': 'host', 'mechanics': 'ffbe',
       'from': 440110, 'visuals': 440110, 'target_effect': null, 'clone_sequence': true, 'mute': ['VO_'], 'caption_from': 440260,
-      'jp': '${u['jp']}_LB', 'en': "${u['en']}'s Resonance",
+      'jp': '${u['jp']}_LB', 'en': "${u['en']}'s Resonance", 'nameAuto': true,
       'desc': '', 'descAuto': true, 'set': {'element': 'None'},
       'sequence_edits': {}, 'effect_swaps': [],
     }});
@@ -201,7 +208,7 @@ class _ResonanceStepState extends State<ResonanceStep> {
             Box(
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 row('Name', Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  TextFormField(key: ValueKey('lbname-${widget.unit['key']}'), initialValue: (lb['en'] ?? '').toString(), onChanged: (v) => upd({'en': v})),
+                  TextFormField(controller: nameController, onChanged: (v) => upd({'en': v, 'nameAuto': false})),
                   if (beLb != null && (beLb!['name'] ?? '').toString().isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text('In Brave Exvius: ${beLb!['name']}. ${((beLb!['effects'] as List?) ?? []).take(3).join(' ')}', style: Guide.small(), maxLines: 3, overflow: TextOverflow.ellipsis),
@@ -445,4 +452,7 @@ class _ResonanceStepState extends State<ResonanceStep> {
     if (t == 'Sound') return Guide.green;
     return Guide.inkFaint;
   }
+
+  @override
+  void dispose() { nameController.dispose(); super.dispose(); }
 }
