@@ -2,25 +2,25 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'downloader.dart';
 
-/// The idle preview can be displayed while the full .ffr unit is downloading.
+/// Browsing uses the startup idle pack; full unit data is fetched on Add unit.
 class UnitAssets {
-  UnitAssets({required this.downloader, required this.dataDir, required this.downloadDir});
+  UnitAssets({required this.downloader, required this.dataDir, required this.downloadDir, required this.idleDir});
   final Downloader downloader;
   final String dataDir;
   final String downloadDir;
+  final String idleDir;
   final Map<String, Future<void>> _pending = {};
 
-  Future<File?> idle(String form, Map<String, dynamic> info) async {
+  File? idle(String form) {
     if (!RegExp(r'^\d+$').hasMatch(form)) throw const FormatException('Invalid unit form');
-    final preview = info['idle'] as Map?;
-    if (preview == null) return null;
-    return downloader.download(preview['url'] as String, p.join(downloadDir, 'idle-$form.webp'), sha256: preview['sha256'] as String?);
+    final file = File(p.join(idleDir, '$form.webp'));
+    return file.existsSync() ? file : null;
   }
 
-  Future<void> ensure(String form, Map<String, dynamic> info, {void Function(String)? onStep, Future<void> Function()? onIndexed}) =>
-      _pending.putIfAbsent(form, () => _ensure(form, info, onStep, onIndexed).whenComplete(() { _pending.remove(form); }));
+  Future<void> ensure(String form, Map<String, dynamic> info, {void Function(String)? onStep, void Function(int, int)? onProgress, Future<void> Function()? onIndexed}) =>
+      _pending.putIfAbsent(form, () => _ensure(form, info, onStep, onProgress, onIndexed).whenComplete(() { _pending.remove(form); }));
 
-  Future<void> _ensure(String form, Map<String, dynamic> info, void Function(String)? onStep, Future<void> Function()? onIndexed) async {
+  Future<void> _ensure(String form, Map<String, dynamic> info, void Function(String)? onStep, void Function(int, int)? onProgress, Future<void> Function()? onIndexed) async {
     if (!RegExp(r'^\d+$').hasMatch(form)) throw const FormatException('Invalid unit form');
     final modern = info['format'] == 'ffr-unit-1';
     final spriteDir = p.join(dataDir, 'sprites', form);
@@ -34,7 +34,8 @@ class UnitAssets {
     final recordings = ((info['sounds'] as List?) ?? []).every((s) => File(p.join(dataDir, 'audio', 'samples', '${s['sha256']}.hca')).existsSync());
     if (sheets && metadata && recordings && ((!modern && expected == null) || marked)) return;
     onStep?.call('Downloading unit data');
-    final f = await downloader.download(info['url'] as String, p.join(downloadDir, '$form.${modern ? 'ffr' : 'zip'}'), sha256: expected);
+    final f = await downloader.download(info['url'] as String, p.join(downloadDir, '$form.${modern ? 'ffr' : 'zip'}'), sha256: expected, onProgress: onProgress);
+    onStep?.call('Unpacking unit data');
     final staging = Directory(p.join(downloadDir, 'unpack-$form'));
     if (!p.isWithin(p.absolute(downloadDir), p.absolute(staging.path))) throw const FormatException('Invalid unpack directory');
     if (staging.existsSync()) staging.deleteSync(recursive: true);
@@ -55,12 +56,14 @@ class UnitAssets {
       file.copySync(dest.path);
     }
     // Recordings are shared by checksum, even when multiple LBs use them.
-    for (final sound in (info['sounds'] as List?) ?? []) {
-      onStep?.call('Downloading limit burst sounds');
+    final sounds = (info['sounds'] as List?) ?? [];
+    for (final (i, sound) in sounds.indexed) {
+      onStep?.call('Downloading limit burst sounds (${i + 1}/${sounds.length})');
       final hash = sound['sha256'] as String;
       if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(hash)) throw const FormatException('Invalid sound checksum');
-      await downloader.download(sound['url'] as String, p.join(dataDir, 'audio', 'samples', '$hash.hca'), sha256: hash);
+      await downloader.download(sound['url'] as String, p.join(dataDir, 'audio', 'samples', '$hash.hca'), sha256: hash, onProgress: onProgress);
     }
+    onStep?.call('Preparing unit');
     await onIndexed?.call();
     marker.writeAsStringSync(expected ?? 'legacy');
     staging.deleteSync(recursive: true);

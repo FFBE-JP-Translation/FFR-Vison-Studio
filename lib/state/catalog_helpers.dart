@@ -130,3 +130,33 @@ List<String> orderAnims(List<String> a) => [..._animOrder.where(a.contains), ...
 
 /// " · Brave Shift" / " · Super Limit Break" for a shifted look, else nothing.
 String shiftLabel(dynamic sh) => sh == null ? '' : (sh['kind'] == 'brave_shift' ? ' · Brave Shift' : ' · Super Limit Break');
+
+/// Available looks come from the catalog, even before their sprites are installed.
+Map<String, dynamic> catalogUnitDetail(Map<String, dynamic> unit, Map<String, dynamic> detail) {
+  final forms = <String, dynamic>{...((detail['forms'] as Map?) ?? {})};
+  final previewForms = (unit['previewDetail']?['forms'] as Map?) ?? {};
+  final shifts = (unit['shift'] as Map?) ?? {};
+  for (final id in {...((unit['forms'] as List?) ?? []), ...previewForms.keys, ...shifts.keys}) {
+    final fid = id.toString();
+    forms[fid] = <String, dynamic>{
+      'rarity': unit['rarity_max'],
+      ...((forms[fid] as Map?) ?? {}),
+      ...((previewForms[fid] as Map?) ?? {}),
+      if (shifts[fid] != null) 'shift': shifts[fid],
+    };
+  }
+  return {...detail, 'forms': forms};
+}
+
+List<String> unitFormDependencies(Map<String, dynamic>? index, String unitId, String form) {
+  final unit = ((index?['units'] as List?) ?? []).cast<Map>().where((u) => u['id'].toString() == unitId).firstOrNull;
+  final result = <String>[];
+  String? current = form;
+  while (current != null) {
+    if (result.contains(current)) throw const FormatException('Circular Brave Shift dependency');
+    result.add(current);
+    final shift = unit?['shift']?[current] ?? unit?['previewDetail']?['forms']?[current]?['shift'];
+    current = shift?['base']?.toString();
+  }
+  return result;
+}

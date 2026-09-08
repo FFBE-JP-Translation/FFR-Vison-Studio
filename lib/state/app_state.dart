@@ -29,11 +29,11 @@ class Progress {
 typedef JsonMap = Map<String, dynamic>;
 
 class AppState extends ChangeNotifier {
-  AppState({required this.hostBase}) { _loadSettings(); _afterUpdate(); }
+  AppState({required this.hostBase, AppPaths? appPaths}) : paths = appPaths ?? AppPaths.resolve() { _loadSettings(); _afterUpdate(); }
   final String hostBase;
-  final paths = AppPaths.resolve();
+  final AppPaths paths;
   late final Downloader dl = Downloader(hostBase);
-  late final UnitAssets unitAssets = UnitAssets(downloader: dl, dataDir: p.join(paths.engineData, 'ffbe'), downloadDir: paths.downloads);
+  late final UnitAssets unitAssets = UnitAssets(downloader: dl, dataDir: p.join(paths.engineData, 'ffbe'), downloadDir: paths.downloads, idleDir: paths.idles);
   Engine? engine;
   Api? api;
 
@@ -45,6 +45,7 @@ class AppState extends ChangeNotifier {
     Progress('Download the Brave Exvius tables'),
     Progress('Download the unit icons'),
     Progress('Download shared resonance sounds'),
+    Progress('Download the idle animations'),
     Progress('Start the engine'),
   ];
   String? gameRoot;
@@ -140,6 +141,7 @@ class AppState extends ChangeNotifier {
           await pack(2, 'tables', p.join(paths.engineData, 'ffbe'));
           await pack(3, 'icons', paths.icons, optional: true);
           await pack(4, 'common', p.join(paths.engineData, 'ffbe'), optional: true);
+          await pack(5, 'idles', paths.idles, optional: true);
         }
         if (!tooNew) { try {
           hostIndex = await dl.json_('ffbe/index.json');
@@ -149,7 +151,7 @@ class AppState extends ChangeNotifier {
       if (hostIndex == null) {
         try { hostIndex = json.decode(File(p.join(paths.root, 'ffbe_index_cache.json')).readAsStringSync()) as JsonMap; } catch (_) {}
       }
-      await _startEngine(bootSteps[5]);
+      await _startEngine(bootSteps[6]);
       gameRoot ??= await GameLocator.detect();
       final st = await api!.status();
       phase = (st['setupNeeded'] == true) ? Phase.setup : Phase.ready;
@@ -165,7 +167,7 @@ class AppState extends ChangeNotifier {
   }
 
   void _markInstalled(Map<String, dynamic> installed) {
-    for (final (i, name) in ['engine', 'base', 'tables', 'icons', 'common'].indexed) {
+    for (final (i, name) in ['engine', 'base', 'tables', 'icons', 'common', 'idles'].indexed) {
       bootSteps[i].state = 'done';
       bootSteps[i].detail = installed[name] == null ? 'not downloaded yet' : 'installed';
     }
@@ -196,7 +198,7 @@ class AppState extends ChangeNotifier {
   /// After the engine stopped on its own: start it again and reload everything.
   Future<void> restartEngine() async {
     try {
-      await _startEngine(bootSteps[5]);
+      await _startEngine(bootSteps[6]);
       if (phase == Phase.ready) await loadAll();
       showNotice('The engine is back.');
     } catch (e) {
@@ -322,23 +324,20 @@ class AppState extends ChangeNotifier {
 
   /// Makes sure a form's sprite pack is on this machine: downloads it from its shard and lets the engine index it.
   /// A pack counts as present only when its sheet, its parts file and the completion marker are all there.
-  Future<void> ensureSprites(String form, {void Function(String)? onStep}) async {
+  Future<void> ensureSprites(String form, {void Function(String)? onStep, void Function(int, int)? onProgress}) async {
     final forms = (hostIndex?['unitBundles'] as JsonMap?) ?? (hostIndex?['forms'] as JsonMap?) ?? {};
     final info = forms[form] as JsonMap?;
     if (info == null && File(p.join(paths.engineSprites, form, '.complete')).existsSync() &&
         File(p.join(paths.engineSprites, form, 'unit_anime_$form.png')).existsSync() &&
         File(p.join(paths.engineSprites, form, 'unit_cgg_$form.csv')).existsSync()) { return; }
     if (info == null) throw StateError(banner != null && banner!.startsWith('Could not reach') ? 'the sprites for this look are not on this machine and the download host is unreachable' : 'no sprite pack for form $form is available on the host yet');
-    await unitAssets.ensure(form, info, onStep: onStep, onIndexed: () async {
+    await unitAssets.ensure(form, info, onStep: onStep, onProgress: onProgress, onIndexed: () async {
       await api!.rebuildFfbeIndex();
       _anims.remove(form);
     });
   }
 
-  Future<File?> ensureIdle(String form) async {
-    final info = ((hostIndex?['unitBundles'] ?? hostIndex?['forms']) as JsonMap?)?[form] as JsonMap?;
-    return info == null ? null : unitAssets.idle(form, info);
-  }
+  File? idleFile(String form) => unitAssets.idle(form);
 
   /// Animation names for a form, from the engine, cached.
   Future<List<String>> animsFor(String form) async {
@@ -349,9 +348,13 @@ class AppState extends ChangeNotifier {
     return a;
   }
 
-  Future<JsonMap> addUnit(String ffbeId, String form, String name, {void Function(String)? onStep}) async {
-    await ensureSprites(form, onStep: onStep);
-    onStep?.call('adding to the mod');
+  Future<JsonMap> addUnit(String ffbeId, String form, String name, {void Function(String)? onStep, void Function(int, int)? onProgress}) async {
+    // Shifted looks borrow victory/down animations from their base. Fetch that
+    // dependency here so browsing never has to install either bundle.
+    for (final dependency in unitFormDependencies(hostIndex, ffbeId, form)) {
+      await ensureSprites(dependency, onStep: (s) => onStep?.call(dependency == form ? s : '$s for the base look'), onProgress: onProgress);
+    }
+    onStep?.call('Adding to the mod');
     final u = await api!.addUnit(ffbeId, form: form, name: name);
     units = await api!.spec();
     selectedKey = u['key'] as String?;

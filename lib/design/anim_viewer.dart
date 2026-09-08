@@ -56,8 +56,9 @@ class _AnimViewerState extends State<AnimViewer> {
       height: widget.height,
       child: Stack(children: [
         Positioned.fill(
-          child: widget.loading && widget.idlePreview != null
-              ? Padding(padding: const EdgeInsets.fromLTRB(36, 8, 36, 26), child: Image.file(widget.idlePreview!, fit: BoxFit.contain, filterQuality: FilterQuality.none))
+          child: widget.idlePreview != null && (widget.loading || anim == 'idle')
+              ? Padding(padding: const EdgeInsets.fromLTRB(36, 8, 36, 26), child: Image.file(widget.idlePreview!, fit: BoxFit.contain, filterQuality: FilterQuality.none,
+                  errorBuilder: (c, e, s) => Center(child: Text('Idle preview unavailable.', style: Guide.small(Guide.inkFaint)))))
               : widget.loading
               ? Center(child: Row(mainAxisSize: MainAxisSize.min, children: [
                   SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Guide.ink)),

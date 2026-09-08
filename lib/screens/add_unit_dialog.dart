@@ -10,7 +10,7 @@ import '../state/catalog_helpers.dart';
 
 Future<void> showAddUnit(BuildContext context) => showDialog<void>(context: context, builder: (_) => const AddUnitDialog());
 
-/// Pick a Brave Exvius unit. Picking one fetches its sprites (a small download) so the look can be previewed here.
+/// Browse cached idle previews. Only Add unit downloads a complete unit bundle.
 class AddUnitDialog extends StatefulWidget {
   const AddUnitDialog({super.key});
   @override
@@ -29,6 +29,8 @@ class _AddUnitDialogState extends State<AddUnitDialog> {
   bool busy = false;
   bool loadingAssets = false;
   String? step;
+  double? downloadFraction;
+  String? downloadSize;
   String? err;
   int _pickSeq = 0;
 
@@ -46,36 +48,22 @@ class _AddUnitDialogState extends State<AddUnitDialog> {
     }
   }
 
-  /// Select a unit: read its record, pick the best look that has a sprite pack, fetch that pack, then show the animations.
+  /// Select from the startup catalog without downloading the unit's assets.
   Future<void> pick(Map<String, dynamic> u) async {
+    if (busy) return;
     final seq = ++_pickSeq;
     setState(() { sel = u; detail = null; idlePreview = null; err = null; loadingAssets = true; });
     final app = context.read<AppState>();
     try {
-      var d = (u['previewDetail'] as Map<String, dynamic>?) ?? await app.api!.ffbeUnit(u['id'] as String);
+      final d = catalogUnitDetail(u, (u['previewDetail'] as Map<String, dynamic>?) ?? await app.api!.ffbeUnit(u['id'] as String));
       if (!mounted || seq != _pickSeq) return;
       final forms = (d['forms'] as Map?)?.keys.map((k) => k.toString()).toList() ?? [];
       final packs = ((u['packs'] as List?) ?? []).map((e) => e.toString()).toSet();
-      final prefer = forms.where(packs.contains).toList();
-      final plain = prefer.where((x) => ((d['forms'] as Map?)?[x] as Map?)?['shift'] == null).toList(); // the base look first; Brave Shift / SLB are a choice
-      final f = plain.isNotEmpty ? plain.last : prefer.isNotEmpty ? prefer.last : (d['maxForm']?.toString() ?? u['id'] as String);
-      setState(() { detail = d; form = f; name.text = (d['name'] as String?) ?? (u['name'] as String? ?? ''); });
-      if (packs.contains(f)) {
-        try {
-          final idle = await app.ensureIdle(f);
-          if (!mounted || seq != _pickSeq) return;
-          setState(() => idlePreview = idle);
-        } catch (_) { /* The full bundle also contains idle. */ }
-        if (!mounted || seq != _pickSeq) return;
-        await app.ensureSprites(f);
-        if (!mounted || seq != _pickSeq) return;
-        final base = ((d['forms'] as Map?)?[f] as Map?)?['shift']?['base']?.toString();
-        if (base != null && packs.contains(base)) await app.ensureSprites(base); // a shifted look borrows its victory from the base form
-        if (!mounted || seq != _pickSeq) return;
-        d = await app.api!.ffbeUnit(u['id'] as String); // now with the animation list for the fetched look
-        if (!mounted || seq != _pickSeq) return;
-        setState(() => detail = d);
-      }
+      final prefer = forms.where(packs.contains).toList()..sort();
+      final plain = prefer.where((x) => ((d['forms'] as Map?)?[x] as Map?)?['shift'] == null).toList();
+      final preferred = d['maxForm']?.toString();
+      final f = plain.contains(preferred) ? preferred! : plain.isNotEmpty ? plain.last : prefer.isNotEmpty ? prefer.last : (preferred ?? u['id'] as String);
+      setState(() { detail = d; form = f; idlePreview = app.idleFile(f); name.text = (d['name'] as String?) ?? (u['name'] as String? ?? ''); });
     } catch (e) {
       if (mounted && seq == _pickSeq) setState(() => err = e.toString());
     } finally {
@@ -83,32 +71,11 @@ class _AddUnitDialogState extends State<AddUnitDialog> {
     }
   }
 
-  /// Switching the look fetches that look's sprites too.
-  Future<void> setForm(String f) async {
+  /// Switching looks reads another idle from the shared startup pack.
+  void setForm(String f) {
+    if (busy) return;
     final app = context.read<AppState>();
-    final packs = ((sel!['packs'] as List?) ?? []).map((e) => e.toString()).toSet();
-    final seq = ++_pickSeq;
-    setState(() { form = f; idlePreview = null; err = null; loadingAssets = packs.contains(f); });
-    if (!packs.contains(f)) return;
-    try {
-      try {
-        final idle = await app.ensureIdle(f);
-        if (!mounted || seq != _pickSeq) return;
-        setState(() => idlePreview = idle);
-      } catch (_) { /* Continue with the full bundle. */ }
-      if (!mounted || seq != _pickSeq) return;
-      await app.ensureSprites(f);
-      if (!mounted || seq != _pickSeq) return;
-      final base = ((detail?['forms'] as Map?)?[f] as Map?)?['shift']?['base']?.toString();
-      if (base != null && packs.contains(base)) await app.ensureSprites(base);
-      if (!mounted || seq != _pickSeq) return;
-      final d = await app.api!.ffbeUnit(sel!['id'] as String);
-      if (mounted && seq == _pickSeq) setState(() => detail = d);
-    } catch (e) {
-      if (mounted && seq == _pickSeq) setState(() => err = e.toString());
-    } finally {
-      if (seq == _pickSeq && mounted) setState(() => loadingAssets = false);
-    }
+    setState(() { form = f; idlePreview = app.idleFile(f); err = null; });
   }
 
   @override
@@ -123,7 +90,7 @@ class _AddUnitDialogState extends State<AddUnitDialog> {
     final inMod = app.units.map((u) => (u as Map)['ffbe']?['base']?.toString()).toSet();
     final packs = sel == null ? <String>{} : ((sel!['packs'] as List?) ?? []).map((e) => e.toString()).toSet();
     final hasPack = packs.contains(form);
-    return Dialog(
+    return PopScope(canPop: !busy, child: Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.all(32),
       child: Paper(
@@ -137,7 +104,7 @@ class _AddUnitDialogState extends State<AddUnitDialog> {
               child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                    TextField(autofocus: true, decoration: InputDecoration(hintText: 'Search by name', suffixText: '${matches.length} units'), onChanged: (v) => setState(() => q = v), onSubmitted: (_) { if (shown.isNotEmpty) pick(shown.first); }),
+                    TextField(autofocus: true, enabled: !busy, decoration: InputDecoration(hintText: 'Search by name', suffixText: '${matches.length} units'), onChanged: (v) => setState(() => q = v), onSubmitted: (_) { if (shown.isNotEmpty) pick(shown.first); }),
                     if (availableCategories.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       DropdownButtonFormField<String>(
@@ -146,10 +113,10 @@ class _AddUnitDialogState extends State<AddUnitDialog> {
                         decoration: const InputDecoration(hintText: 'Filter by category'),
                         items: [for (final id in availableCategories.where((id) => !selectedCategories.contains(id)))
                           DropdownMenuItem(value: id, child: Text(categoryLabels[id]['name'].toString(), overflow: TextOverflow.ellipsis))],
-                        onChanged: (id) { if (id != null) setState(() => selectedCategories.add(id)); },
+                        onChanged: busy ? null : (id) { if (id != null) setState(() => selectedCategories.add(id)); },
                       ),
                       if (selectedCategories.isNotEmpty) Wrap(spacing: 4, children: [for (final id in selectedCategories)
-                        InputChip(label: Text(categoryLabels[id]['name'].toString()), onDeleted: () => setState(() => selectedCategories.remove(id)))]),
+                        InputChip(label: Text(categoryLabels[id]['name'].toString()), onDeleted: busy ? null : () => setState(() => selectedCategories.remove(id)))]),
                     ],
                     const SizedBox(height: 8),
                     Expanded(
@@ -165,7 +132,7 @@ class _AddUnitDialogState extends State<AddUnitDialog> {
                             return Material(
                               color: active ? Guide.paper3 : (i.isOdd ? Guide.paper2 : Guide.paper),
                               child: InkWell(
-                                onTap: () => pick(u),
+                                onTap: busy ? null : () => pick(u),
                                 child: Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                                   child: Row(children: [
@@ -210,23 +177,37 @@ class _AddUnitDialogState extends State<AddUnitDialog> {
             decoration: BoxDecoration(border: Border(top: BorderSide(color: Guide.hairline))),
             padding: const EdgeInsets.all(12),
             child: Row(children: [
-              if (err != null && detail != null) Expanded(child: Text(err!, style: Guide.small(Guide.red))) else if (step != null && busy) Expanded(child: Text(step!, style: Guide.small())) else const Spacer(),
+              if (err != null && detail != null) Expanded(child: Text(err!, style: Guide.small(Guide.red))) else if (busy) Expanded(child: Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('${step ?? 'Preparing download'}${downloadSize == null ? '' : ' · $downloadSize'}', style: Guide.small()),
+                  const SizedBox(height: 6),
+                  LinearProgressIndicator(value: downloadFraction, color: Guide.blue),
+                ]),
+              )) else const Spacer(),
               GuideButton('Cancel', onPressed: busy ? null : () => Navigator.of(context).pop()),
               const SizedBox(width: 8),
               GoButton(busy ? 'Adding' : 'Add unit', color: Guide.blue, busy: busy, onPressed: detail == null || !hasPack || busy || loadingAssets ? null : () async {
-                setState(() { busy = true; err = null; });
+                setState(() { busy = true; err = null; step = null; downloadFraction = null; downloadSize = null; });
                 try {
-                  await app.addUnit(sel!['id'] as String, form, name.text, onStep: (s) => setState(() => step = s));
-                  if (context.mounted) Navigator.of(context).pop();
+                  await app.addUnit(sel!['id'] as String, form, name.text, onStep: (s) {
+                    if (mounted) setState(() { step = s; downloadFraction = null; downloadSize = null; });
+                  }, onProgress: (got, total) {
+                    if (mounted) { setState(() {
+                      downloadFraction = total > 0 ? (got / total).clamp(0.0, 1.0) : null;
+                      downloadSize = total > 0 ? '${(downloadFraction! * 100).round()}% · ${(got / 1048576).toStringAsFixed(1)} / ${(total / 1048576).toStringAsFixed(1)} MB' : '${(got / 1048576).toStringAsFixed(1)} MB';
+                    }); }
+                  });
+                  if (context.mounted) { Navigator.of(context).pop(); }
                 } catch (e) {
-                  setState(() { err = e.toString(); busy = false; });
+                  if (mounted) setState(() { err = e.toString(); busy = false; });
                 }
               }),
             ]),
           ),
         ]),
       ),
-    );
+    ));
   }
 
   /// The face icon: from the icons pack on disk, else from the engine (downloaded sprites). Never from the host per row.
@@ -249,8 +230,6 @@ class _AddUnitDialogState extends State<AddUnitDialog> {
     final d = detail!;
     final forms = ((d['forms'] as Map?) ?? {}).map((k, v) => MapEntry(k.toString(), v as Map));
     final st = (d['ffrStats'] as Map?) ?? {};
-    final anims = ((forms[form]?['sprites'] as List?) ?? []).map((e) => e.toString()).toList();
-    final ordered = orderAnims(anims);
     Widget stat(String l, dynamic v) => Expanded(child: Row(children: [Text(l, style: Guide.small()), const Spacer(), Text('${v ?? '-'}', style: Guide.num())]));
     Widget row(List<Widget> cells, {bool zebra = false}) => Container(
           color: zebra ? Guide.paper2 : Guide.paper,
@@ -267,37 +246,31 @@ class _AddUnitDialogState extends State<AddUnitDialog> {
         ])),
       ]),
       const SizedBox(height: 10),
-      Row(children: [
-        Expanded(flex: 3, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('NAME IN THE GAME', style: Guide.label()),
-          const SizedBox(height: 4),
-          TextField(controller: name),
-        ])),
-        const SizedBox(width: 10),
-        Expanded(flex: 2, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('LOOK', style: Guide.label()),
-          const SizedBox(height: 4),
-          DropdownButtonFormField<String>(
-            key: ValueKey('form$form'), initialValue: forms.containsKey(form) ? form : null, isExpanded: true,
-            items: [for (final e in forms.entries) DropdownMenuItem(value: e.key, child: Text('${rarityLabel(e.value['rarity'])}${shiftLabel(e.value['shift'])}${packs.contains(e.key) ? '' : ' (no sprites)'}', style: Guide.text(), overflow: TextOverflow.ellipsis))],
-            onChanged: (v) { if (v != null) setForm(v); },
-          ),
-        ])),
-      ]),
+      Text('NAME IN THE GAME', style: Guide.label()),
+      const SizedBox(height: 4),
+      TextField(controller: name, enabled: !busy),
+      const SizedBox(height: 10),
+      Text('LOOK', style: Guide.label()),
+      const SizedBox(height: 4),
+      DropdownButtonFormField<String>(
+        key: ValueKey('form$form'), initialValue: forms.containsKey(form) ? form : null, isExpanded: true,
+        items: [for (final e in forms.entries) DropdownMenuItem(value: e.key, child: Text('${rarityLabel(e.value['rarity'])}${shiftLabel(e.value['shift'])}${packs.contains(e.key) ? '' : ' (no sprites)'}', style: Guide.text(), overflow: TextOverflow.ellipsis))],
+        onChanged: busy ? null : (v) { if (v != null) setForm(v); },
+      ),
       const SizedBox(height: 10),
       AnimViewer(
         key: ValueKey('viewer$form'),
-        anims: hasPack ? ordered : const [],
+        anims: idlePreview != null ? const ['idle'] : const [],
         url: (a) => app.api!.animUrl(form, a),
         initial: 'idle',
         height: 210,
         loading: loadingAssets,
         idlePreview: idlePreview,
-        loadingText: idlePreview == null ? 'Loading idle animation' : 'Downloading unit data and sounds…',
-        emptyText: hasPack ? 'No animations for this look.' : 'No sprite pack for this look is on the host yet.',
+        loadingText: 'Loading idle preview',
+        emptyText: hasPack ? 'Idle preview unavailable. You can still add this unit.' : 'No sprite pack for this look is on the host yet.',
       ),
       const SizedBox(height: 10),
-      Box(
+      if (st.isNotEmpty) Box(
         padding: EdgeInsets.zero,
         child: Column(children: [
           row([stat('HP', st['MaxHitPoint']), stat('Attack', st['Attack'])]),
@@ -306,7 +279,8 @@ class _AddUnitDialogState extends State<AddUnitDialog> {
         ]),
       ),
       const SizedBox(height: 6),
-      Text('Level 1 values for FINAL FANTASY RESONANCE, scaled from the Brave Exvius maximums.', style: Guide.small(Guide.inkFaint)),
+      if (st.isNotEmpty) Text('Level 1 values for FINAL FANTASY RESONANCE, scaled from the Brave Exvius maximums.', style: Guide.small(Guide.inkFaint)),
+      if (st.isEmpty) Text('Add this unit to explore its stats, abilities and other animations.', style: Guide.small(Guide.inkFaint)),
       if (!hasPack) ...[const SizedBox(height: 8), Box(fill: Guide.warn, child: Text('No sprite pack for this look is on the host yet, so it cannot be added. Pick another look, or ask for it to be added.', style: Guide.small(Guide.ink)))],
     ]);
   }
