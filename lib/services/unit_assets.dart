@@ -23,13 +23,14 @@ class UnitAssets {
   Future<void> _ensure(String form, Map<String, dynamic> info, void Function(String)? onStep, void Function(int, int)? onProgress, Future<void> Function()? onIndexed) async {
     if (!RegExp(r'^\d+$').hasMatch(form)) throw const FormatException('Invalid unit form');
     final modern = info['format'] == 'ffr-unit-1';
+    final requiredMetadata = ['unit_records/${info['unitId']}.json', 'lb_profiles/$form.json', 'audio/lb/$form.json', if (info['nativeKit'] != null) 'native_kits/$form.json'];
     final spriteDir = p.join(dataDir, 'sprites', form);
     final marker = File(p.join(spriteDir, '.complete'));
     final expected = info['sha256'] as String?;
     bool exists(String rel) => File(p.join(spriteDir, rel)).existsSync();
     final sheets = exists('unit_anime_$form.png') && exists('unit_cgg_$form.csv');
     final marked = marker.existsSync() && marker.readAsStringSync() == expected;
-    final metadata = !modern || ['unit_records/${info['unitId']}.json', 'lb_profiles/$form.json', 'audio/lb/$form.json']
+    final metadata = !modern || requiredMetadata
         .every((rel) => File(p.join(dataDir, rel)).existsSync());
     final recordings = ((info['sounds'] as List?) ?? []).every((s) => File(p.join(dataDir, 'audio', 'samples', '${s['sha256']}.hca')).existsSync());
     if (sheets && metadata && recordings && ((!modern && expected == null) || marked)) return;
@@ -45,7 +46,7 @@ class UnitAssets {
       if (!File(p.join(extractedSprites, name)).existsSync()) throw StateError('The unit pack for $form is incomplete');
     }
     if (modern) {
-      for (final rel in ['unit_records/${info['unitId']}.json', 'lb_profiles/$form.json', 'audio/lb/$form.json']) {
+      for (final rel in requiredMetadata) {
         if (!File(p.join(staging.path, rel)).existsSync()) throw StateError('The unit pack is missing $rel');
       }
     }

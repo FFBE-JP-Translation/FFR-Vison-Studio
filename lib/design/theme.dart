@@ -6,21 +6,21 @@ import 'package:flutter/material.dart';
 /// paper, off-white ink). Bands, frames and the GO button keep their colours; only paper and ink swap.
 class _Palette {
   const _Palette({required this.desk, required this.paper, required this.paper2, required this.paper3, required this.ink, required this.inkSoft, required this.inkFaint, required this.hairline,
-      required this.blue, required this.gold, required this.red, required this.green, required this.purple, required this.consoleBg, required this.consoleFg, required this.warn});
-  final Color desk, paper, paper2, paper3, ink, inkSoft, inkFaint, hairline, blue, gold, red, green, purple, consoleBg, consoleFg, warn;
+      required this.blue, required this.gold, required this.red, required this.green, required this.purple, required this.warn});
+  final Color desk, paper, paper2, paper3, ink, inkSoft, inkFaint, hairline, blue, gold, red, green, purple, warn;
 }
 
 const _day = _Palette(
   desk: Color(0xFFCFCBC2), paper: Color(0xFFFFFFFF), paper2: Color(0xFFF4F2ED), paper3: Color(0xFFE9E6DE),
   ink: Color(0xFF121212), inkSoft: Color(0xFF4B4B4B), inkFaint: Color(0xFF8A877F), hairline: Color(0xFFC9C5BB),
   blue: Color(0xFF1F4FD0), gold: Color(0xFFD9A21B), red: Color(0xFFD42B2B), green: Color(0xFF178A45), purple: Color(0xFF6B3FB0),
-  consoleBg: Color(0xFF121212), consoleFg: Color(0xFFF4F2ED), warn: Color(0xFFFFF4DE),
+  warn: Color(0xFFFFF4DE),
 );
 const _night = _Palette(
   desk: Color(0xFF14151A), paper: Color(0xFF1F2126), paper2: Color(0xFF272A31), paper3: Color(0xFF323640),
   ink: Color(0xFFF1EFE8), inkSoft: Color(0xFFB9B5AC), inkFaint: Color(0xFF7E7A72), hairline: Color(0xFF3C4049),
   blue: Color(0xFF3D6CE8), gold: Color(0xFFE2B134), red: Color(0xFFE0463F), green: Color(0xFF2DAA60), purple: Color(0xFF8C61CF),
-  consoleBg: Color(0xFF0E0F12), consoleFg: Color(0xFFCFCBC2), warn: Color(0xFF3A3220),
+  warn: Color(0xFF3A3220),
 );
 
 class Guide {
@@ -37,8 +37,9 @@ class Guide {
   static Color get inkSoft => _p.inkSoft;
   static Color get inkFaint => _p.inkFaint;
   static Color get hairline => _p.hairline;
-  static Color get consoleBg => _p.consoleBg;
-  static Color get consoleFg => _p.consoleFg;
+  // Console contrast stays fixed when the page theme changes.
+  static const consoleBg = Colors.black;
+  static const consoleFg = Colors.white;
   static Color get warn => _p.warn;
   // bands (one job each)
   static Color get blue => _p.blue; // sections, selection, links

@@ -1,8 +1,9 @@
 /// Stamped by a numbered build (--dart-define APP_VERSION/APP_BUILD). A developer build is build 0.
 const appVersion = String.fromEnvironment('APP_VERSION', defaultValue: '1.0.0');
 const appBuild = String.fromEnvironment('APP_BUILD', defaultValue: '0');
+const appLocalRevision = String.fromEnvironment('APP_LOCAL_REVISION');
 const appTag = '$appVersion.$appBuild';
-const appLabel = 'version $appVersion · build $appBuild';
+const appLabel = 'version $appVersion · build $appBuild${appLocalRevision == '' ? '' : ' · local $appLocalRevision'}';
 
 /// Dotted numeric tags ("1.0.0.4"): negative when a is older than b, 0 when equal.
 int compareTags(String a, String b) {

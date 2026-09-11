@@ -53,7 +53,23 @@ class Api {
   Future<Map<String, dynamic>> restoreGame({String? backup}) async => (await post('/api/game/restore', backup == null ? {} : {'backup': backup})) as Map<String, dynamic>;
 
   String iconUrl(String png) => '$base/api/ffr/icon/$png';
+  String ffbeAbilityIcon(String png) => '$base/api/ffbe/abilityicon/${Uri.encodeComponent(png.replaceAll('\\', '/').split('/').last)}';
+  Future<Map<String, dynamic>> previewKit(Map<String, dynamic> unit) async =>
+      (await post('/api/ffbe/kit/preview', {'unit': unit})) as Map<String, dynamic>;
+  Future<Map<String, dynamic>> importKit(Map<String, dynamic> unit) async =>
+      (await post('/api/ffbe/kit/import', {'unit': unit})) as Map<String, dynamic>;
+  Future<Map<String, dynamic>> importAbility(Map<String, dynamic> unit, Map<String, dynamic> ability,
+      String? region, Map<String, String> choices) async =>
+      (await post('/api/ffbe/ability/import', {'unit': unit, 'ability': ability, 'region': region, 'effectChoices': choices})) as Map<String, dynamic>;
   String unitIcon(String key, String kind) => '$base/api/spec/$key/icon/$kind';
+  Future<Map<String, dynamic>> reviewedLb(Map<String, dynamic> unit) async =>
+      (await post('/api/ffbe/lb/preview', {'unit': unit})) as Map<String, dynamic>;
+  Future<Map<String, dynamic>> grants(Map<String, dynamic> unit, Map<String, dynamic> action) async =>
+      (await post('/api/studio/grants', {'unit': unit, ...action})) as Map<String, dynamic>;
+  Future<Map<String, dynamic>> kitLoadout(Map<String, dynamic> unit, String sourceKey,
+      {String? replaceId, bool remove = false}) async =>
+      (await post('/api/ffbe/kit/loadout', {'unit': unit, 'sourceKey': sourceKey,
+        'replaceId': replaceId, 'remove': remove})) as Map<String, dynamic>;
   String ffbeIcon(String form) => '$base/api/ffbe/icon/$form';
   String ffbePreview(String form, String anim) => '$base/api/ffbe/preview/$form/$anim';
   String animUrl(String form, String anim) => '$base/api/ffbe/anim/$form/$anim.webp';

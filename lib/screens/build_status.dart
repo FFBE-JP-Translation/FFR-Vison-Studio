@@ -50,7 +50,7 @@ class _BuildStatusState extends State<BuildStatus> {
             const SizedBox(height: 10),
             Container(
               height: 220,
-              color: Guide.ink,
+              color: Guide.consoleBg,
               padding: const EdgeInsets.all(10),
               child: SingleChildScrollView(controller: _scroll, child: SelectableText(log.join('\n'), style: Guide.mono(Guide.consoleFg))),
             ),

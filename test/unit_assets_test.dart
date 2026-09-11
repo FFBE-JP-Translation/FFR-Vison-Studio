@@ -24,7 +24,7 @@ void main() {
     final hash = sha256.convert(sound).toString();
     final archive = Archive();
     for (final name in ['sprites/123/unit_anime_123.png', 'sprites/123/unit_cgg_123.csv',
-      'unit_records/12.json', 'lb_profiles/123.json', 'audio/lb/123.json']) {
+      'unit_records/12.json', 'lb_profiles/123.json', 'audio/lb/123.json', 'native_kits/123.json']) {
       archive.addFile(ArchiveFile(name, 2, [123, 125]));
     }
     final bundle = ZipEncoder().encode(archive);
@@ -37,7 +37,7 @@ void main() {
     });
     final dl = Downloader('http://127.0.0.1:${server.port}/');
     final assets = UnitAssets(downloader: dl, dataDir: p.join(root.path, 'data'), downloadDir: p.join(root.path, 'downloads'), idleDir: p.join(root.path, 'idles'));
-    final info = <String, dynamic>{'url': '123.ffr', 'format': 'ffr-unit-1', 'unitId': '12', 'sha256': sha256.convert(bundle).toString(),
+    final info = <String, dynamic>{'url': '123.ffr', 'format': 'ffr-unit-1', 'unitId': '12', 'nativeKit': 'reviewed-rules', 'sha256': sha256.convert(bundle).toString(),
       'idle': {'url': '123.webp', 'sha256': sha256.convert([1, 2, 3]).toString()},
       'sounds': [{'url': 'sound.hca', 'sha256': hash}]};
     var indexed = 0;
@@ -57,6 +57,12 @@ void main() {
       expect(progress, contains(sound.length));
       await assets.ensure('123', info);
       expect(requests.length, 2);
+      final nativeKit = File(p.join(root.path, 'data', 'native_kits', '123.json'));
+      expect(nativeKit.existsSync(), isTrue);
+      nativeKit.deleteSync();
+      await assets.ensure('123', info);
+      expect(nativeKit.existsSync(), isTrue);
+      expect(requests.length, 2); // Repair from the validated cached .ffr.
       File(p.join(root.path, 'data', 'audio', 'samples', '$hash.hca')).deleteSync();
       await assets.ensure('123', info);
       expect(requests, ['/123.ffr', '/sound.hca', '/sound.hca']);

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:ffr_vision_studio/design/anim_viewer.dart';
+import 'package:ffr_vision_studio/design/widgets.dart';
 import 'package:ffr_vision_studio/screens/add_unit_dialog.dart';
 import 'package:ffr_vision_studio/services/paths.dart';
 import 'package:ffr_vision_studio/state/app_state.dart';
@@ -42,6 +43,30 @@ class TestApp extends AppState {
 }
 
 void main() {
+  testWidgets('Accelle with a hosted pack remains addable while showing an idle preview', (tester) async {
+    final tmp = Directory.systemTemp.createTempSync('ffr-accelle-picker-');
+    final app = TestApp(tmp.path);
+    app.hostIndex = {'units':[{'id':'100030904','name':'Accelle','hasSprites':true,'packs':['100030904','100030905','100030906'],
+      'forms':['100030904','100030905','100030906'],'rarity_min':'4','rarity_max':'6',
+      'previewDetail':{'id':'100030904','name':'Accelle','maxForm':'100030906','forms':{
+        '100030904':{'rarity':'4'},'100030905':{'rarity':'5'},'100030906':{'rarity':'6'}}}}]};
+    addTearDown(() { app.dispose(); tmp.deleteSync(recursive:true); });
+    tester.view.physicalSize = const Size(1200,900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(ChangeNotifierProvider<AppState>.value(value:app, child: const MaterialApp(home: Scaffold(body:AddUnitDialog()))));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Accelle'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('(no sprites)'), findsNothing);
+    expect(find.textContaining('No sprite pack for this look'), findsNothing);
+    expect(tester.widget<GoButton>(find.byType(GoButton)).onPressed, isNotNull);
+    expect(tester.widget<AnimViewer>(find.byType(AnimViewer)).idlePreview, isNotNull);
+    expect(app.imports, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
   test('Brave Shift dependencies survive partial details for both reported units', () {
     for (final u in [unit('2B', '401013807', '401013817'), unit('Sora', '340000107', '340000117')]) {
       final detail = catalogUnitDetail(u, u['previewDetail']);

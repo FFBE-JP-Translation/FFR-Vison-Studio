@@ -65,7 +65,8 @@ class _ResonanceStepState extends State<ResonanceStep> {
     final form = ff?['id']?.toString();
     if (form == null || (app.catalog?['ffbeResonance'] as Map?)?['lbProfiles'] != true) return;
     try {
-      final profile = await app.api!.ffbeLb(form,
+      final reviewed = (widget.unit['lb_custom']?['effectPolicy'] ?? '').toString().startsWith('ffbe-ffr-reviewed/');
+      final profile = reviewed ? await app.api!.reviewedLb(widget.unit) : await app.api!.ffbeLb(form,
           lbId: (widget.unit['lb_custom'] as Map?)?['ffbe_lb_id']?.toString(), source: (ff?['source'] ?? 'JP').toString());
       if (!mounted || request != profileRequest) return;
       setState(() => lbProfile = profile);
@@ -121,7 +122,8 @@ class _ResonanceStepState extends State<ResonanceStep> {
     if (lb == null) return Center(child: Text('preparing', style: Guide.small()));
     final supportsOwn = cat['ffbeResonance'] != null && widget.unit['ffbe'] != null;
     final own = (lb['presentation'] ?? (supportsOwn ? 'ffbe' : 'template')) == 'ffbe';
-    final autoMechanics = own && (lb['mechanics'] ?? 'ffbe') == 'ffbe';
+    final reviewed = (lb['effectPolicy'] ?? '').toString().startsWith('ffbe-ffr-reviewed/');
+    final autoMechanics = own && (reviewed || (lb['mechanics'] ?? 'ffbe') == 'ffbe');
     final autoColor = (lb['field_color_mode'] ?? 'element') == 'element';
     final finish = (cat['skills'] as List).cast<Map<String, dynamic>>().where((s) => s['attr'] == 'FinishBlow').toList();
     final effById = {for (final e in (cat['effects'] as List).cast<Map<String, dynamic>>()) e['id'] as num: e};
@@ -156,7 +158,7 @@ class _ResonanceStepState extends State<ResonanceStep> {
     }
     void upd(Map<String, dynamic> patch) {
       final n = {...lb, ...patch};
-      final fromLb = own && (n['mechanics'] ?? 'ffbe') == 'ffbe';
+      final fromLb = own && ['ffbe', 'converted'].contains(n['mechanics'] ?? 'ffbe');
       if (fromLb && lbProfile?['supported'] == true && !patch.containsKey('ffbe_lb_id')) n['set'] = lbProfile!['set'];
       if (n['descAuto'] != false) {
         if (fromLb) {
@@ -240,7 +242,8 @@ class _ResonanceStepState extends State<ResonanceStep> {
                         DropdownMenuItem(value: 'disabled', child: Text('Off'))],
                       onChanged: (v) { if (v != null) upd({'audio': v, 'audio_codec': 'host'}); },
                     )),
-                    row('Mechanics', DropdownButtonFormField<String>(
+                    if (reviewed) row('Mechanics', Text('Reviewed FFBE effects. Choose another limit burst in FFBE skills · test loadout.', style: Guide.small()))
+                    else row('Mechanics', DropdownButtonFormField<String>(
                       key: ValueKey('mechanics-$autoMechanics'), initialValue: autoMechanics ? 'ffbe' : 'custom',
                       items: const [DropdownMenuItem(value: 'ffbe', child: Text('Use imported LB data')),
                         DropdownMenuItem(value: 'custom', child: Text('Custom mechanics (advanced)'))],
@@ -256,7 +259,7 @@ class _ResonanceStepState extends State<ResonanceStep> {
                         )),
                       if (autoMechanics && lbProfile!['supported'] == true) ...[
                         row('LB data', Text('${lbProfile!['target']} · ${lbProfile!['hits']} hits · ${(lbProfile!['elements'] as List).isEmpty ? 'Non-elemental' : (lbProfile!['elements'] as List).join(' / ')}', style: Guide.text())),
-                        if (lbProfile!['mode'] == 'support')
+                        if (reviewed || lbProfile!['mode'] == 'support')
                           row('Effects', Text(lbProfile!['description'].toString(), style: Guide.small()))
                         else if (lbProfile!['mode'] == 'fallback') ...[
                           row('Mechanics used', Text('Generic damage fallback: 10 equal hits to all enemies, using Cloud’s total power (${lbProfile!['totalPower']}). The original LB mechanics are not available yet.', style: Guide.text())),

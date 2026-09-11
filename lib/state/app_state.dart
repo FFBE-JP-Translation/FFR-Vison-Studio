@@ -33,7 +33,8 @@ class AppState extends ChangeNotifier {
   final String hostBase;
   final AppPaths paths;
   late final Downloader dl = Downloader(hostBase);
-  late final UnitAssets unitAssets = UnitAssets(downloader: dl, dataDir: p.join(paths.engineData, 'ffbe'), downloadDir: paths.downloads, idleDir: paths.idles);
+  String? _connectedDataDir;
+  late final UnitAssets unitAssets = UnitAssets(downloader: dl, dataDir: _connectedDataDir ?? p.join(paths.engineData, 'ffbe'), downloadDir: paths.downloads, idleDir: paths.idles);
   Engine? engine;
   Api? api;
 
@@ -83,6 +84,12 @@ class AppState extends ChangeNotifier {
   // ---------------------------------------------------------------- boot
   Future<void> boot() async {
     try {
+      // Opt-in source checkout launcher; leave packaged engine updates unchanged.
+      final localApi = Platform.environment['FFR_STUDIO_API'];
+      if (localApi != null) {
+        await connectLocalApi(localApi);
+        return;
+      }
       // Find the game first so the folder is already filled in while the packs download.
       if (gameRoot == null) GameLocator.detect().then((g) { if (g != null && gameRoot == null) { gameRoot = g; notifyListeners(); } });
       final installed = _readInstalled();
@@ -163,6 +170,36 @@ class AppState extends ChangeNotifier {
       fatal = e.toString();
       phase = Phase.failed;
     }
+    notifyListeners();
+  }
+
+  /// Share the hosted catalog with a source engine, including its asset paths.
+  Future<void> connectLocalApi(String base) async {
+    final uri = Uri.parse(base);
+    if (uri.scheme != 'http' || uri.host != '127.0.0.1') throw StateError('The local Studio API must use http://127.0.0.1');
+    api = Api(base);
+    final st = await api!.status();
+    final dataDir = st['ffbeDataDir'] as String?;
+    if (dataDir == null || !p.isAbsolute(dataDir)) throw StateError('Restart the updated local Studio engine; its asset directory is missing.');
+    _connectedDataDir = dataDir;
+    final cache = File(p.join(paths.root, 'ffbe_index_cache.json'));
+    try {
+      hostIndex = await dl.json_('ffbe/index.json');
+      cache.parent.createSync(recursive: true);
+      cache.writeAsStringSync(json.encode(hostIndex));
+    } catch (_) {
+      try { hostIndex = json.decode(cache.readAsStringSync()) as JsonMap; } catch (_) {}
+      banner = 'Could not reach the download host. Using cached unit availability where available.';
+    }
+    if (hostIndex != null && st['unitIndexCache'] is String) {
+      final engineCache = File(st['unitIndexCache'] as String);
+      engineCache.parent.createSync(recursive: true);
+      engineCache.writeAsStringSync(json.encode(hostIndex));
+    }
+    phase = st['setupNeeded'] == true ? Phase.setup : Phase.ready;
+    if (phase == Phase.ready) await loadAll();
+    await refreshStatus();
+    _statusTimer = Timer.periodic(const Duration(seconds: 8), (_) => refreshStatus());
     notifyListeners();
   }
 
@@ -284,7 +321,21 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void select(String? key) { selectedKey = key; notifyListeners(); }
+  final Set<String> _kitImports = {};
+  Future<void> select(String? key) async {
+    selectedKey = key;
+    notifyListeners();
+    final unit = selected;
+    if (key == null || unit == null || unit['ffbe'] == null || unit['custom'] == true || api == null || !_kitImports.add(key)) return;
+    try {
+      final imported = await api!.importKit(unit);
+      // An import must not overwrite edits made while it was loading.
+      final current = units.cast<JsonMap?>().firstWhere((u) => u?['key'] == key, orElse: () => null);
+      if (identical(current, unit) && imported['ffbeKit'] != null) update(imported);
+    } catch (e) {
+      showNotice('Could not import this vision’s FFBE kit: $e');
+    } finally { _kitImports.remove(key); }
+  }
 
   void update(JsonMap unit) {
     units = units.map((u) => (u as JsonMap)['key'] == unit['key'] ? unit : u).toList();
@@ -327,9 +378,9 @@ class AppState extends ChangeNotifier {
   Future<void> ensureSprites(String form, {void Function(String)? onStep, void Function(int, int)? onProgress}) async {
     final forms = (hostIndex?['unitBundles'] as JsonMap?) ?? (hostIndex?['forms'] as JsonMap?) ?? {};
     final info = forms[form] as JsonMap?;
-    if (info == null && File(p.join(paths.engineSprites, form, '.complete')).existsSync() &&
-        File(p.join(paths.engineSprites, form, 'unit_anime_$form.png')).existsSync() &&
-        File(p.join(paths.engineSprites, form, 'unit_cgg_$form.csv')).existsSync()) { return; }
+    if (info == null && File(p.join(unitAssets.dataDir, 'sprites', form, '.complete')).existsSync() &&
+        File(p.join(unitAssets.dataDir, 'sprites', form, 'unit_anime_$form.png')).existsSync() &&
+        File(p.join(unitAssets.dataDir, 'sprites', form, 'unit_cgg_$form.csv')).existsSync()) { return; }
     if (info == null) throw StateError(banner != null && banner!.startsWith('Could not reach') ? 'the sprites for this look are not on this machine and the download host is unreachable' : 'no sprite pack for form $form is available on the host yet');
     await unitAssets.ensure(form, info, onStep: onStep, onProgress: onProgress, onIndexed: () async {
       await api!.rebuildFfbeIndex();
