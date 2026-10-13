@@ -1,0 +1,13 @@
+-r requirements.txt
+
+# FastAPI route tests and packaging.
+httpx==0.27.0
+PyInstaller==6.22.2
+
+# Native binary inspection/build helpers; not needed by the local engine.
+pefile==2024.8.26
+capstone==5.0.7
+
+# Optional canonical Lua runtime tests (tools/tests/requirements-ability-runtime.txt).
+# These tests are outside check_source.py's fixture-only test allowlist.
+lupa==2.6

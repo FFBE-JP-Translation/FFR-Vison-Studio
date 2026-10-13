@@ -1,0 +1,14 @@
+{
+  "ue4ss-sdk-24b12662": {
+    "url": "https://codeload.github.com/UE4SS-RE/RE-UE4SS/zip/24b126628ea99671e592cd76048655b2313d7c19",
+    "sha256": "75d0590146ad6354d96ff638c692098f30c8789949d9e5c2685dbca8f4502ece"
+  },
+  "fmt-11.2.0": {
+    "url": "https://codeload.github.com/fmtlib/fmt/zip/refs/tags/11.2.0",
+    "sha256": "ebb31f63e14048ffba9200bbe27b339ec50226cbe8e96ca8b62ee16a0a4fb1af"
+  },
+  "minhook-1.3.4": {
+    "url": "https://codeload.github.com/TsudaKageyu/minhook/zip/refs/tags/v1.3.4",
+    "sha256": "172708123daa0c98d20d3a980b16a50be14af243dc95dee6f79c24193ad010e4"
+  }
+}

@@ -1,0 +1,91 @@
+.attack-lab { max-width: 1660px; margin: 0 auto; min-width: 0; }
+.app:has(.attack-lab) { grid-template-columns: 230px minmax(0, 1fr); }
+.app:has(.attack-lab) .main { min-width: 0; }
+.attack-lab h2 { margin: 0; font-size: 27px; font-weight: 650; }
+.attack-lab h3 { margin: 0 0 8px; font-size: 15px; }
+.attack-lab p { color: var(--muted); line-height: 1.5; margin: 6px 0 12px; }
+.attack-lab button { min-height: 36px; }
+.attack-lab select, .attack-lab input { min-width: 0; }
+.al-header, .al-move-title, .al-progress > div { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.al-header { margin-bottom: 24px; }
+.al-header p { margin: 5px 0 0; }
+.al-save-state { color: var(--muted); max-width: 38ch; text-align: right; font-size: 12px; }
+.al-selection { display: grid; grid-template-columns: 1fr .7fr 1.4fr; gap: 16px; border-block: 1px solid var(--line); padding: 16px 0 20px; margin-bottom: 20px; }
+.al-selection label, .al-select-label { display: block; margin-bottom: 6px; font-weight: 600; }
+.al-selection input, .al-selection select { display: block; width: 100%; margin-bottom: 8px; }
+.al-selection p { font-size: 12px; }
+.al-workbench { display: grid; grid-template-columns: minmax(360px, 1fr) 340px; gap: 24px; align-items: start; }
+.al-viewer { min-width: 0; position: sticky; top: 16px; }
+.al-move-title { align-items: baseline; flex-wrap: wrap; margin-bottom: 12px; }
+.al-move-title h3 { font-size: 20px; margin: 0; }
+.al-move-title span { color: var(--muted); font-size: 12px; }
+.al-scene { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: #10181b; border: 1px solid var(--line); isolation: isolate; }
+.al-world { position: absolute; inset: 0; transition: transform 180ms ease-out; }
+.al-ground { position: absolute; left: -100%; right: -100%; top: 74%; bottom: -100%; border-top: 1px solid #526364; background: #1b292a; }
+.al-target { position: absolute; top: 36%; width: 12%; height: 38%; transform: translateX(-50%); background: #596266; border: 2px solid #abb7b8; z-index: 2; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; }
+.al-target span { writing-mode: vertical-rl; letter-spacing: .04em; }
+.al-vision { position: absolute; bottom: 26%; max-height: 38%; max-width: 30%; min-height: 60px; transform: translateX(-50%); image-rendering: pixelated; z-index: 3; object-fit: contain; }
+.al-effect { position: absolute; max-width: none; image-rendering: pixelated; pointer-events: none; }
+.al-aura { position: absolute; top: 69%; transform: translateX(-50%); width: 10%; padding: 8px 0; border: 1px solid #599fd6; color: #b1d8fc; text-align: center; background: #244469; z-index: 2; font-size: 10px; }
+.al-party { position: absolute; right: 2%; top: 58%; height: 16%; width: 9%; border: 1px dashed #778e95; color: #a2b3b8; text-align: center; font-size: 10px; padding: 8px 3px; z-index: 2; }
+.al-preview-label { position: absolute; top: 12px; left: 12px; background: #10181be8; color: #d4e1e4; padding: 5px 8px; font-size: 12px; z-index: 6; }
+.al-playback { display: flex; align-items: center; gap: 8px; margin: 12px 0; }
+.al-playback input { flex: 1; }
+.al-playback output { white-space: nowrap; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.al-stages { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(5, 1fr); border-block: 1px solid var(--line); }
+.al-stages button { border: 0; border-radius: 0; background: transparent; color: var(--muted); padding: 12px 5px; width: 100%; text-align: left; font-size: 11px; }
+.al-stages button[aria-current=step] { background: var(--panel2); color: var(--accent); }
+.al-stages button span { display: block; font-size: 15px; font-weight: 650; margin-bottom: 4px; }
+.al-preview-note { font-size: 12px; max-width: 80ch; }
+.al-inspector { border-left: 1px solid var(--line); padding-left: 20px; min-width: 0; }
+.al-inspector select { width: 100%; margin-bottom: 12px; }
+.al-inspector h3:not(:first-child) { margin-top: 26px; }
+.al-inspector p { font-size: 12px; }
+.al-tabs { display: flex; border-bottom: 1px solid var(--line); margin-bottom: 18px; }
+.al-tabs button { flex: 1; border: 0; border-bottom: 2px solid transparent; background: transparent; border-radius: 0; color: var(--muted); }
+.al-tabs button[aria-selected=true] { color: var(--accent); border-bottom-color: var(--accent); }
+.al-number { margin: 12px 0 17px; }
+.al-number label { display: block; font-size: 12px; margin-bottom: 5px; }
+.al-number > div { display: flex; gap: 8px; align-items: center; }
+.al-number input[type=range] { flex: 1; width: 80px; accent-color: var(--accent); padding-inline: 0; }
+.al-number input[type=number] { width: 74px; font-variant-numeric: tabular-nums; }
+.al-number span { color: var(--muted); font-size: 11px; }
+.al-check { display: flex; align-items: flex-start; gap: 8px; margin: 16px 0; line-height: 1.5; }
+.al-check input { margin-top: 3px; }
+.al-actions { margin-top: 24px; padding: 18px 0; border-top: 1px solid var(--line); }
+.al-actions > div { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.al-actions p { margin-top: 10px; max-width: 85ch; font-size: 12px; }
+.al-install { background: #255d9e; color: #fff; border-color: #6ea8ff; }
+.al-install:hover:not(:disabled) { background: #316faf; }
+.al-error { padding: 12px 16px; color: var(--bad); border: 1px solid var(--bad); margin-bottom: 16px; display: flex; gap: 16px; align-items: center; justify-content: space-between; }
+.al-empty { padding: 48px 16px; text-align: center; color: var(--muted); }
+.al-notice { padding: 12px; background: var(--panel); border: 1px solid var(--line); }
+.al-issues { font-size: 12px; margin-top: 16px; }
+.al-issues li { margin: 8px 0; color: var(--muted); }
+.al-progress { border-top: 1px solid var(--line); margin-top: 16px; padding-top: 16px; }
+.al-progress progress { width: 100%; margin: 12px 0; accent-color: var(--accent); }
+.al-progress pre { max-height: 300px; white-space: pre-wrap; overflow: auto; overflow-wrap: anywhere; background: #101216; padding: 14px; color: var(--text); font: 12px/1.5 Consolas, monospace; }
+.attack-lab-nav { margin: 4px 12px 12px; text-align: left; }
+.attack-lab-nav.active { border-color: var(--accent); color: var(--accent); }
+@media (max-width: 1250px) { .al-workbench { grid-template-columns: minmax(300px, 1fr) 300px; gap: 16px; } .al-inspector { padding-left: 16px; } }
+@media (max-width: 1000px) { .al-workbench { grid-template-columns: 1fr; } .al-viewer { position: static; } .al-inspector { border-left: 0; border-top: 1px solid var(--line); padding: 16px 0 0; } .al-selection { grid-template-columns: 1fr 1fr; } .al-selection > div:last-child { grid-column: 1 / -1; } }
+@media (max-width: 620px) { .app:has(.attack-lab) { display: block; } .app:has(.attack-lab) .side { width: auto; height: auto; position: static; } .app:has(.attack-lab) .side .units, .app:has(.attack-lab) .side .foot { display: none; } .app:has(.attack-lab) .main { margin-left: 0; padding: 12px; } .al-header { align-items: flex-start; gap: 8px; } .al-header h2 { font-size: 23px; } .al-header p, .al-save-state { font-size: 11px; } .al-selection { gap: 10px; } .al-playback { flex-wrap: wrap; } .al-playback input { min-width: 120px; } .al-actions button { flex: 1; } }
+@media (prefers-reduced-motion: reduce) { .al-world { transition: none; } }
+@media (max-width: 620px) {
+  .app:has(.attack-lab) { height: auto; min-height: 100vh; width: 100%; }
+  .app:has(.attack-lab) .main { overflow: visible; max-width: 100%; }
+  .al-header { flex-wrap: wrap; }
+  .al-save-state { text-align: left; overflow-wrap: anywhere; }
+  .al-selection { grid-template-columns: minmax(0, 1fr); }
+  .al-workbench { grid-template-columns: minmax(0, 1fr); }
+  .al-playback input { flex-basis: 100px; min-width: 0; }
+  .al-playback output { width: 100%; text-align: right; }
+  .al-number input[type=range] { width: 0; }
+  .al-number input[type=number] { flex: 0 0 74px; }
+  .al-number span { flex-shrink: 0; }
+  .al-stages { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .al-stages button { overflow-wrap: anywhere; }
+  .al-actions > div { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .al-progress > div { flex-wrap: wrap; }
+  .al-progress h3 { overflow-wrap: anywhere; }
+}

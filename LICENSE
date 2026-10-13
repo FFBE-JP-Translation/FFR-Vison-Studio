@@ -22,9 +22,9 @@ SOFTWARE.
 
 ---
 
-This license covers the source code of the app. It does not cover the game data
+This license covers the source code of Vision Studio and its mod tools. It does not cover the game data
 the app downloads at run time, the Brave Exvius sprite packs, or the artwork in
 assets/brand (a Final Fantasy Brave Exvius unit icon used as the app's icon):
-those remain the property of Square Enix Holdings Co., Ltd. and are used by this
+those, including game artwork references under mod-tools/, remain the property of Square Enix Holdings Co., Ltd. and are used by this
 fan project to name and show the games. The bundled fonts (assets/fonts) are
 under the SIL Open Font License 1.1 (see assets/fonts/OFL.txt).

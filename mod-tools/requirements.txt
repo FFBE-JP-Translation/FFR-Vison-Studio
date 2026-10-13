@@ -1,0 +1,12 @@
+# Python 3.12 dependencies used by the Studio engine and mod tools.
+# Versions match the working source environment used for this source export.
+fastapi==0.112.0
+uvicorn==0.30.5
+python-multipart==0.0.9
+anyio==4.4.0
+pydantic==2.8.2
+starlette==0.37.2
+numpy==1.26.4
+Pillow==10.4.0
+opencv-python==4.10.0.84
+pycryptodome==3.23.0

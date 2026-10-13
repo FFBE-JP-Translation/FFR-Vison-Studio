@@ -1,10 +1,14 @@
-# FFR Vision Studio (Windows app)
+# FFR Vision Studio
 
-The native front of the studio: a Flutter desktop app that downloads and supervises the Python/.NET engine
-(`FFR Vision Studio Engine.exe`, fetched from the project's host on first start) and drives its Easy mode natively.
-This repository is the app on its own: it needs nothing else on disk to build, and at runtime it talks only to the
-engine over localhost and to the host over HTTPS. Design: `DESIGN.md` and `lib/design/DIRECTION.md`. The engine's
-source, the pack builder and the project notes live in a separate project repository, which is not published yet.
+The Windows app and the source of its mod tools live in this repository. The Flutter app downloads and supervises
+the Python/.NET engine (`FFR Vision Studio Engine.exe`, fetched from the project's host on first start) and drives
+its Easy mode natively. The engine, Vision and unit builders, Vision Cards, extra party members, custom battles,
+ability conversion, animation tools and native game hooks are under [`mod-tools/`](mod-tools/README.md).
+
+The Flutter app builds independently of the mod tools. At runtime it talks to the engine over localhost and to the
+download hosts over HTTPS. Game data, extracted assets and third-party tool binaries are separate dependencies;
+they are not included as source. See [`mod-tools/README.md`](mod-tools/README.md) for setup, source navigation and
+the advanced build recipes. App design: `DESIGN.md` and `lib/design/DIRECTION.md`.
 
 ## Build
 
@@ -24,9 +28,9 @@ flutter build windows --release --build-name 1.0.0 --build-number <n> \
 ```
 
 `.github/workflows/windows.yml` runs analyze, test and that build on every push (build 0) and attaches the Release
-folder as an artifact; a numbered build is a manual run ("Run workflow" with the build number). The zips people
-download are assembled by the packaging run in the project repository, which passes the same flags and ships the
-exe next to the engine and the data packs.
+folder as an artifact; a numbered build is a manual run ("Run workflow" with the build number). Mod tooling has a
+separate workflow, `.github/workflows/mod-tools.yml`. Release and data-pack builders are in `mod-tools/tools/release/`;
+see the mod-tools guide for their external data requirements.
 
 ## Layout
 
@@ -36,6 +40,9 @@ exe next to the engine and the data packs.
 - `lib/design/` the guide's tokens (`Guide`, day and night editions), parts, wordmark, motion viewer, choice
 - `lib/screens/` setup, home (spread), unit page and its four steps, add-unit, copy-a-vision, about, build status
 - `windows/runner/Runner.rc` exe metadata; `windows/runner/resources/app_icon.ico` Rain's face
+- `mod-tools/tools/` Python engine, mod builders, converters, advanced React editor and tests
+- `mod-tools/src/` .NET asset tools and C++/Lua runtime hooks
+- `mod-tools/docs/` mod formats, game mechanics and build recipes
 
 ## Developing without touching your real install
 
@@ -46,4 +53,5 @@ under `<LOCALAPPDATA>\FFR Vision Studio`. `FFR_STUDIO_HOST` points it at another
 ## Files
 
 `CHANGELOG.md` (by build), `LICENSE` (MIT for the code; the game's art and data are Square Enix's and excluded),
-`CONTRIBUTING.md`, `.github/workflows/windows.yml` (analyze, test, build, artifact on every push).
+`CONTRIBUTING.md`, `.github/workflows/windows.yml` (Flutter analyze, test, build),
+`.github/workflows/mod-tools.yml` (mod source checks).

@@ -1,0 +1,2 @@
+# Only needed to execute the canonical Lua state engine in Python tests.
+lupa==2.6

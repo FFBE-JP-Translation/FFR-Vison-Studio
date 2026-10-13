@@ -1,0 +1,50 @@
+cmake_minimum_required(VERSION 3.22)
+project(FFRAvailabilityRuntime LANGUAGES C CXX)
+if(NOT WIN32 OR NOT MSVC OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+  message(FATAL_ERROR "This bridge targets the pinned Win64/MSVC demo runtime")
+endif()
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDLL)
+get_filename_component(FFR_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../.." ABSOLUTE)
+set(DEPS "${FFR_ROOT}/build/tooling")
+set(SDK "${DEPS}/ue4ss-sdk-24b12662")
+set(GENERATED "${FFR_ROOT}/build/abilities/native-bridge-sdk")
+if(NOT EXISTS "${GENERATED}/UE4SS.def")
+  message(FATAL_ERROR "Run bootstrap.py before configuring")
+endif()
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+add_subdirectory("${DEPS}/minhook-1.3.4" minhook EXCLUDE_FROM_ALL)
+add_library(bridge_core STATIC bridge_core.cpp query_bridge.cpp)
+target_link_libraries(bridge_core PUBLIC minhook bcrypt)
+target_compile_definitions(bridge_core PUBLIC NOMINMAX WIN32_LEAN_AND_MEAN)
+target_include_directories(bridge_core PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+target_compile_options(bridge_core PRIVATE /W4 /WX /EHsc)
+
+add_custom_command(OUTPUT "${GENERATED}/UE4SS.lib"
+  COMMAND "${CMAKE_AR}" /nologo /machine:x64 "/def:${GENERATED}/UE4SS.def" "/out:${GENERATED}/UE4SS.lib"
+  DEPENDS "${GENERATED}/UE4SS.def" VERBATIM)
+add_custom_target(ue4ss_import DEPENDS "${GENERATED}/UE4SS.lib")
+add_library(FFRAvailabilityRuntime SHARED mod.cpp)
+add_dependencies(FFRAvailabilityRuntime ue4ss_import)
+target_link_libraries(FFRAvailabilityRuntime PRIVATE bridge_core "${GENERATED}/UE4SS.lib" bcrypt)
+target_include_directories(FFRAvailabilityRuntime SYSTEM PRIVATE "${GENERATED}/include" "${SDK}/UE4SS/include"
+  "${SDK}/deps/first/LuaMadeSimple/include" "${SDK}/deps/first/LuaRaw/include"
+  "${SDK}/deps/first/File/include" "${SDK}/deps/first/Input/include" "${SDK}/deps/first/String/include"
+  "${DEPS}/fmt-11.2.0/include")
+target_compile_definitions(FFRAvailabilityRuntime PRIVATE HAS_INPUT _DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR)
+target_compile_options(FFRAvailabilityRuntime PRIVATE /W4 /EHsc /utf-8)
+set_target_properties(FFRAvailabilityRuntime PROPERTIES OUTPUT_NAME main)
+
+# Independent test executable: actual MinHook detours and an isolated Lua 5.4
+# interpreter. It never loads UE4SS or attaches to the game process.
+file(GLOB LUA_SOURCES "${SDK}/deps/first/LuaRaw/src/*.c")
+list(FILTER LUA_SOURCES EXCLUDE REGEX "/(lua|luac)\\.c$")
+add_library(test_lua STATIC ${LUA_SOURCES})
+target_include_directories(test_lua PUBLIC "${SDK}/deps/first/LuaRaw/include")
+target_compile_options(test_lua PRIVATE /W0)
+add_executable(bridge_tests tests.cpp query_tests.cpp)
+target_link_libraries(bridge_tests PRIVATE bridge_core test_lua)
+target_compile_options(bridge_tests PRIVATE /W4 /WX /EHsc)
+target_compile_definitions(bridge_tests PRIVATE "FFR_ROOT=\"${FFR_ROOT}\"")
+enable_testing()
+add_test(NAME native_bridge COMMAND bridge_tests)

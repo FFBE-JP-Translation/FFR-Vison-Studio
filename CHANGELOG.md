@@ -4,6 +4,13 @@ FFR Vision Studio, the Windows app. The product is 1.0.0 while the first release
 build (`1.0.0.<build>` in file names, the manifest and the app's own version check). Engine changes are listed when the app
 needs them.
 
+## Unreleased
+
+- Added `mod-tools/` with the Python engine and builders, advanced React editor, .NET asset tools and native C++/Lua
+  sources for Visions, units, Vision Cards, extra party members, custom battles, abilities and animation conversion.
+- Added mod-tool setup and build documentation and separate source checks. Game data and downloaded tool binaries
+  remain external dependencies.
+
 ## 1.0.0 build 13 — local testing
 
 - Category filters can be combined with unit-name searches.

@@ -1,0 +1,826 @@
+{
+  "10000001": {
+    "name": "Fire",
+    "jpname": "火",
+    "group": "10"
+  },
+  "10000002": {
+    "name": "Ice",
+    "jpname": "氷",
+    "group": "10"
+  },
+  "10000003": {
+    "name": "Lightning",
+    "jpname": "雷",
+    "group": "10"
+  },
+  "10000004": {
+    "name": "Water",
+    "jpname": "水",
+    "group": "10"
+  },
+  "10000005": {
+    "name": "Wind",
+    "jpname": "風",
+    "group": "10"
+  },
+  "10000006": {
+    "name": "Earth",
+    "jpname": "土",
+    "group": "10"
+  },
+  "10000007": {
+    "name": "Light",
+    "jpname": "光",
+    "group": "10"
+  },
+  "10000008": {
+    "name": "Dark",
+    "jpname": "闇",
+    "group": "10"
+  },
+  "20000001": {
+    "name": "Attacker",
+    "jpname": "物攻",
+    "group": "40"
+  },
+  "20000002": {
+    "name": "Mage",
+    "jpname": "魔攻",
+    "group": "40"
+  },
+  "20000003": {
+    "name": "Physical Tank",
+    "jpname": "物防",
+    "group": "40"
+  },
+  "20000004": {
+    "name": "Magic Tank",
+    "jpname": "魔防",
+    "group": "40"
+  },
+  "20000005": {
+    "name": "Healer",
+    "jpname": "回復",
+    "group": "40"
+  },
+  "20000006": {
+    "name": "Support",
+    "jpname": "支援",
+    "group": "40"
+  },
+  "20000007": {
+    "name": "Breaker",
+    "jpname": "妨害",
+    "group": "40"
+  },
+  "30010001": {
+    "name": "FFI",
+    "jpname": "FFI",
+    "group": "30"
+  },
+  "30010002": {
+    "name": "FFII",
+    "jpname": "FFII",
+    "group": "30"
+  },
+  "30010003": {
+    "name": "FFIII",
+    "jpname": "FFIII",
+    "group": "30"
+  },
+  "30010004": {
+    "name": "FFIV",
+    "jpname": "FFIV",
+    "group": "30"
+  },
+  "30010005": {
+    "name": "FFV",
+    "jpname": "FFV",
+    "group": "30"
+  },
+  "30010006": {
+    "name": "FFVI",
+    "jpname": "FFVI",
+    "group": "30"
+  },
+  "30010007": {
+    "name": "FFVII",
+    "jpname": "FFVII",
+    "group": "30"
+  },
+  "30010008": {
+    "name": "FFVIII",
+    "jpname": "FFVIII",
+    "group": "30"
+  },
+  "30010009": {
+    "name": "FFIX",
+    "jpname": "FFIX",
+    "group": "30"
+  },
+  "30010010": {
+    "name": "FFX",
+    "jpname": "FFX",
+    "group": "30"
+  },
+  "30010011": {
+    "name": "FFXI",
+    "jpname": "FFXI",
+    "group": "30"
+  },
+  "30010012": {
+    "name": "FFXII",
+    "jpname": "FFXII",
+    "group": "30"
+  },
+  "30010013": {
+    "name": "FFXIII",
+    "jpname": "FFXIII",
+    "group": "30"
+  },
+  "30010014": {
+    "name": "FFXIV",
+    "jpname": "FFXIV",
+    "group": "30"
+  },
+  "30010015": {
+    "name": "FFXV",
+    "jpname": "FFXV",
+    "group": "30"
+  },
+  "30010016": {
+    "name": "FFXVI",
+    "jpname": "FFXVI",
+    "group": "30"
+  },
+  "30011001": {
+    "name": "FFBE",
+    "jpname": "FFBE",
+    "group": "30"
+  },
+  "30011002": {
+    "name": "FFT",
+    "jpname": "FFT",
+    "group": "30"
+  },
+  "30011003": {
+    "name": "FF Type-0",
+    "jpname": "FF零式",
+    "group": "30"
+  },
+  "30011012": {
+    "name": "Emblem of Roto",
+    "jpname": "ロトの紋章",
+    "group": "60"
+  },
+  "30011013": {
+    "name": "The Adventure of Dai",
+    "jpname": "ダイの大冒険",
+    "group": "60"
+  },
+  "30011014": {
+    "name": "Fullmetal Alchemist",
+    "jpname": "鋼の錬金術師",
+    "group": "60"
+  },
+  "30011015": {
+    "name": "Xenogears",
+    "jpname": "ゼノギアス",
+    "group": "60"
+  },
+  "30011016": {
+    "name": "SaGa Series",
+    "jpname": "サガシリーズ",
+    "group": "60"
+  },
+  "30011017": {
+    "name": "Star Ocean",
+    "jpname": "STAR OCEAN",
+    "group": "60"
+  },
+  "30020001": {
+    "name": "Another World",
+    "jpname": "異世界の強者",
+    "group": "60"
+  },
+  "40000001": {
+    "name": "FFBE S1",
+    "jpname": "FFBE1st",
+    "group": "30"
+  },
+  "40000002": {
+    "name": "FFBE S2",
+    "jpname": "FFBE2nd",
+    "group": "30"
+  },
+  "40000003": {
+    "name": "FFBE S3",
+    "jpname": "FFBE3rd",
+    "group": "30"
+  },
+  "40000004": {
+    "name": "FFBE S4",
+    "jpname": "FFBE4th",
+    "group": "30"
+  },
+  "40000011": {
+    "name": "Bestowed Power",
+    "jpname": "ビジョン解放",
+    "group": "20"
+  },
+  "40000012": {
+    "name": "Anniversary (JP)",
+    "jpname": "Anniv.Story",
+    "group": "20"
+  },
+  "40000013": {
+    "name": "Dark Lineage",
+    "jpname": "魔将の系譜",
+    "group": "20"
+  },
+  "40000014": {
+    "name": "Evocation",
+    "jpname": "召喚",
+    "group": "20"
+  },
+  "40000015": {
+    "name": "Rewards",
+    "jpname": "EX",
+    "group": "50"
+  },
+  "40000016": {
+    "name": "Mana Series",
+    "jpname": "マナの加護",
+    "group": "60"
+  },
+  "40000017": {
+    "name": "Chamber of Arms",
+    "jpname": "十二武具",
+    "group": "50"
+  },
+  "40000018": {
+    "name": "Blessing of the Crystals",
+    "jpname": "クリスタルの加護",
+    "group": "20"
+  },
+  "40000019": {
+    "name": "The Rebellion",
+    "jpname": "叛旗を翻す者たち",
+    "group": "20"
+  },
+  "40000020": {
+    "name": "Bonds",
+    "jpname": "絆",
+    "group": "20"
+  },
+  "40000021": {
+    "name": "WOTV FFBE",
+    "jpname": "FFBE 幻影戦争",
+    "group": "60"
+  },
+  "40000022": {
+    "name": "Blood of Hess",
+    "jpname": "ヘスの血脈",
+    "group": "20"
+  },
+  "40000023": {
+    "name": "The Gathering",
+    "jpname": "集められし者たち",
+    "group": "20"
+  },
+  "40000024": {
+    "name": "Royal Arms",
+    "jpname": "王家の御旗",
+    "group": "20"
+  },
+  "40000025": {
+    "name": "Esper of Destruction",
+    "jpname": "破滅の幻獣",
+    "group": "20"
+  },
+  "40000026": {
+    "name": "The Guardians",
+    "jpname": "守りし者たち",
+    "group": "20"
+  },
+  "40000027": {
+    "name": "Harbingers of Chaos",
+    "jpname": "混沌をもたらす者たち",
+    "group": "20"
+  },
+  "40000028": {
+    "name": "Elite Soldiers",
+    "jpname": "稀なる兵たち",
+    "group": "20"
+  },
+  "40000029": {
+    "name": "Road to Glory",
+    "jpname": "ROAD TO GLORY",
+    "group": "50"
+  },
+  "40000030": {
+    "name": "Series Bosses",
+    "jpname": "シリーズボス",
+    "group": "50"
+  },
+  "40000031": {
+    "name": "The Saviors",
+    "jpname": "世界を救いし者たち",
+    "group": "20"
+  },
+  "40000032": {
+    "name": "Flowers of the Battlefield",
+    "jpname": "戦場を駆けし乙女",
+    "group": "20"
+  },
+  "40000033": {
+    "name": "Those Who Walk the Path of the Sword",
+    "jpname": "剣の道を征く者",
+    "group": "20"
+  },
+  "40000034": {
+    "name": "Transcendent Ones",
+    "jpname": "超越せし者",
+    "group": "20"
+  },
+  "40000035": {
+    "name": "FFBE S5",
+    "jpname": "FFBE5th",
+    "group": "30"
+  },
+  "40000036": {
+    "name": "The First Companions",
+    "jpname": "はじまりの仲間たち",
+    "group": "20"
+  },
+  "90000001": {
+    "name": "Clash of Wills",
+    "jpname": null,
+    "group": null
+  },
+  "90000002": {
+    "name": "CW - Fire",
+    "jpname": null,
+    "group": null
+  },
+  "90000003": {
+    "name": "CW - Ice",
+    "jpname": null,
+    "group": null
+  },
+  "90000004": {
+    "name": "CW - Lightning",
+    "jpname": null,
+    "group": null
+  },
+  "90000005": {
+    "name": "CW - Water",
+    "jpname": null,
+    "group": null
+  },
+  "90000006": {
+    "name": "CW - Wind",
+    "jpname": null,
+    "group": null
+  },
+  "90000007": {
+    "name": "CW - Earth",
+    "jpname": null,
+    "group": null
+  },
+  "90000008": {
+    "name": "CW - Light",
+    "jpname": null,
+    "group": null
+  },
+  "90000009": {
+    "name": "CW - Dark",
+    "jpname": null,
+    "group": null
+  },
+  "90000010": {
+    "name": "CW - Support",
+    "jpname": null,
+    "group": null
+  },
+  "game:10001": {
+    "name": "FFI",
+    "jpname": "FFI",
+    "group": "Origin"
+  },
+  "game:10002": {
+    "name": "FFII",
+    "jpname": "FFII",
+    "group": "Origin"
+  },
+  "game:10003": {
+    "name": "FFIII",
+    "jpname": "FFIII",
+    "group": "Origin"
+  },
+  "game:10004": {
+    "name": "FFIV",
+    "jpname": "FFIV",
+    "group": "Origin"
+  },
+  "game:10005": {
+    "name": "FFV",
+    "jpname": "FFV",
+    "group": "Origin"
+  },
+  "game:10006": {
+    "name": "FFVI",
+    "jpname": "FF6",
+    "group": "Origin"
+  },
+  "game:10007": {
+    "name": "FFVII",
+    "jpname": "FFVII",
+    "group": "Origin"
+  },
+  "game:10008": {
+    "name": "FFVIII",
+    "jpname": "FFVIII",
+    "group": "Origin"
+  },
+  "game:10009": {
+    "name": "FFIX",
+    "jpname": "FFIX",
+    "group": "Origin"
+  },
+  "game:10010": {
+    "name": "FFX",
+    "jpname": "FFX",
+    "group": "Origin"
+  },
+  "game:10011": {
+    "name": "FFXI",
+    "jpname": "FF11",
+    "group": "Origin"
+  },
+  "game:10012": {
+    "name": "FFXII",
+    "jpname": "FFXII",
+    "group": "Origin"
+  },
+  "game:10013": {
+    "name": "FFXIII",
+    "jpname": "FF13",
+    "group": "Origin"
+  },
+  "game:10014": {
+    "name": "FFXIV",
+    "jpname": "FF14",
+    "group": "Origin"
+  },
+  "game:10015": {
+    "name": "FFXV",
+    "jpname": "FF15",
+    "group": "Origin"
+  },
+  "game:10016": {
+    "name": "FF16",
+    "jpname": "FF16",
+    "group": "Origin"
+  },
+  "game:11001": {
+    "name": "FFBE",
+    "jpname": "FFBE",
+    "group": "Origin"
+  },
+  "game:11002": {
+    "name": "FFT",
+    "jpname": "FFT",
+    "group": "Origin"
+  },
+  "game:11003": {
+    "name": "FF Type-0",
+    "jpname": "FF零式",
+    "group": "Origin"
+  },
+  "game:11004": {
+    "name": "FFX-2",
+    "jpname": "FFX-2",
+    "group": "Origin"
+  },
+  "game:11005": {
+    "name": "FFXII RW",
+    "jpname": "FF12 RW",
+    "group": "Origin"
+  },
+  "game:11006": {
+    "name": "FFXIII-2",
+    "jpname": "FF13-2",
+    "group": "Origin"
+  },
+  "game:11007": {
+    "name": "LRFFXIII",
+    "jpname": "LR FF13",
+    "group": "Origin"
+  },
+  "game:11008": {
+    "name": "FFIV: TAY",
+    "jpname": "FF4TA",
+    "group": "Origin"
+  },
+  "game:11009": {
+    "name": "FFVII: Advent Children",
+    "jpname": "FF7AC",
+    "group": "Origin"
+  },
+  "game:11010": {
+    "name": "WOTV FFBE",
+    "jpname": "FFBE幻影戦争",
+    "group": "Origin"
+  },
+  "game:11011": {
+    "name": "FINAL FANTASY Record Keeper",
+    "jpname": "FINAL FANTASY Record Keeper",
+    "group": "Origin"
+  },
+  "game:11012": {
+    "name": "CCFFVIIR",
+    "jpname": "CCFF7",
+    "group": "Origin"
+  },
+  "game:20001": {
+    "name": "Terra Battle",
+    "jpname": "TERRA BATTLE",
+    "group": "Origin"
+  },
+  "game:20002": {
+    "name": "Imperial SaGa",
+    "jpname": "ImperialSaGa",
+    "group": "Origin"
+  },
+  "game:20003": {
+    "name": "Brave Frontier",
+    "jpname": "ブレイブ フロンティア",
+    "group": "Origin"
+  },
+  "game:20004": {
+    "name": "Crystal Defenders",
+    "jpname": "CRYSTAL DEFENDERS",
+    "group": "Origin"
+  },
+  "game:20005": {
+    "name": "Secret of Mana",
+    "jpname": "聖剣伝説2",
+    "group": "Origin"
+  },
+  "game:20006": {
+    "name": "Dragon Quest",
+    "jpname": "DQMSL",
+    "group": "Origin"
+  },
+  "game:20007": {
+    "name": "Monster Hunter Explore",
+    "jpname": "モンスターハンターエクスプロア",
+    "group": "Origin"
+  },
+  "game:20008": {
+    "name": "Romancing SaGa 3",
+    "jpname": "RomancingSa・Ga3",
+    "group": "Origin"
+  },
+  "game:20009": {
+    "name": "Ariana Grande",
+    "jpname": "ARIANA GRANDE",
+    "group": "Origin"
+  },
+  "game:20010": {
+    "name": "NieR:Automata",
+    "jpname": "NieR:Automata",
+    "group": "Origin"
+  },
+  "game:20011": {
+    "name": "FINAL FANTASY ADVENTURE",
+    "jpname": "聖剣伝説",
+    "group": "Origin"
+  },
+  "game:20012": {
+    "name": "Seiken Densetsu 3",
+    "jpname": "聖剣伝説3",
+    "group": "Origin"
+  },
+  "game:20013": {
+    "name": "Bravely Default",
+    "jpname": "BRAVELYDEFAULT",
+    "group": "Origin"
+  },
+  "game:20014": {
+    "name": "Bravely Default FE",
+    "jpname": "BRAVELYDEFAULTFE",
+    "group": "Origin"
+  },
+  "game:20015": {
+    "name": "Bravely Second",
+    "jpname": "BRAVELYSECOND",
+    "group": "Origin"
+  },
+  "game:20016": {
+    "name": "SO1",
+    "jpname": "SO1",
+    "group": "Origin"
+  },
+  "game:20017": {
+    "name": "SO2",
+    "jpname": "SO2",
+    "group": "Origin"
+  },
+  "game:20018": {
+    "name": "SO3",
+    "jpname": "SO3",
+    "group": "Origin"
+  },
+  "game:20019": {
+    "name": "SO4",
+    "jpname": "SO4",
+    "group": "Origin"
+  },
+  "game:20020": {
+    "name": "SO5",
+    "jpname": "SO5",
+    "group": "Origin"
+  },
+  "game:20021": {
+    "name": "King's Knight WoDD",
+    "jpname": "キングスナイト WoDD",
+    "group": "Origin"
+  },
+  "game:20022": {
+    "name": "VALKYRIE PROFILE -LENNETH-",
+    "jpname": "ヴァルキリープロファイル",
+    "group": "Origin"
+  },
+  "game:20023": {
+    "name": "Lara Croft and the Temple of Osiris",
+    "jpname": "ララ・クロフト アンド テンプル オブ オシリス",
+    "group": "Origin"
+  },
+  "game:20024": {
+    "name": "Xenogears",
+    "jpname": "ゼノギアス",
+    "group": "Origin"
+  },
+  "game:20025": {
+    "name": "Octopath Traveler",
+    "jpname": "オクトパストラベラー",
+    "group": "Origin"
+  },
+  "game:20026": {
+    "name": "Riko-Doki!",
+    "jpname": "リコドキッ！",
+    "group": "Origin"
+  },
+  "game:20027": {
+    "name": "WOFF",
+    "jpname": "WOFF",
+    "group": "Origin"
+  },
+  "game:20028": {
+    "name": "Kingdom Hearts",
+    "jpname": "KH",
+    "group": "Origin"
+  },
+  "game:20029": {
+    "name": "DRAGON QUEST XI S",
+    "jpname": "DQXIS",
+    "group": "Origin"
+  },
+  "game:20030": {
+    "name": "SINoALICE",
+    "jpname": "SINoALICE",
+    "group": "Origin"
+  },
+  "game:20031": {
+    "name": "KATY PERRY",
+    "jpname": "KATY PERRY",
+    "group": "Origin"
+  },
+  "game:20032": {
+    "name": "Fullmetal Alchemist",
+    "jpname": "鋼の錬金術師",
+    "group": "Origin"
+  },
+  "game:20033": {
+    "name": "Kingdom Hearts III",
+    "jpname": "キングダム ハーツIII",
+    "group": "Origin"
+  },
+  "game:20034": {
+    "name": "Kingdom Hearts Dark Road",
+    "jpname": "キングダム ハーツ ダーク ロード",
+    "group": "Origin"
+  },
+  "game:20035": {
+    "name": "Legend of Mana",
+    "jpname": "聖剣伝説LoM",
+    "group": "Origin"
+  },
+  "game:20036": {
+    "name": "Actraiser Renaissance",
+    "jpname": "アクトレイザー",
+    "group": "Origin"
+  },
+  "game:20037": {
+    "name": "DRAGON QUEST The Adventure of Dai",
+    "jpname": "ドラゴンクエスト ダイの大冒険",
+    "group": "Origin"
+  },
+  "game:20038": {
+    "name": "Chrono Cross",
+    "jpname": "クロノ・クロス",
+    "group": "Origin"
+  },
+  "game:20039": {
+    "name": "Dragon Quest: Emblem of Roto",
+    "jpname": "ドラゴンクエスト列伝 ロトの紋章",
+    "group": "Origin"
+  },
+  "game:20040": {
+    "name": "Voice of Cards",
+    "jpname": "Voice of Cards",
+    "group": "Origin"
+  },
+  "game:20041": {
+    "name": "Engage Kill",
+    "jpname": "Engage Kill",
+    "group": "Origin"
+  },
+  "game:20042": {
+    "name": "Parasite Eve",
+    "jpname": "パラサイト・イヴ",
+    "group": "Origin"
+  },
+  "game:20043": {
+    "name": "RomancingSa・Ga",
+    "jpname": "RomancingSa・Ga",
+    "group": "Origin"
+  },
+  "game:20044": {
+    "name": "RomancingSa・Ga2",
+    "jpname": "RomancingSa・Ga2",
+    "group": "Origin"
+  },
+  "game:20045": {
+    "name": "SaGa Frontier",
+    "jpname": "SaGa Frontier",
+    "group": "Origin"
+  },
+  "game:20046": {
+    "name": "SaGa Frontier2",
+    "jpname": "SaGa Frontier2",
+    "group": "Origin"
+  },
+  "game:20047": {
+    "name": "Bloody Escape",
+    "jpname": "BLOODY ESCAPE -地獄の逃走劇-",
+    "group": "Origin"
+  },
+  "game:20048": {
+    "name": "SO2R",
+    "jpname": "SO2R",
+    "group": "Origin"
+  },
+  "game:20049": {
+    "name": "Visions of Mana",
+    "jpname": "聖剣伝説 VoM",
+    "group": "Origin"
+  },
+  "game:20050": {
+    "name": "Papuwa",
+    "jpname": "南国少年パプワくん",
+    "group": "Origin"
+  },
+  "game:20051": {
+    "name": "Magical Circle Guru Guru",
+    "jpname": "魔法陣グルグル",
+    "group": "Origin"
+  },
+  "game:90001": {
+    "name": "Ariana Grande",
+    "group": "Origin"
+  },
+  "game:90002": {
+    "name": "King's Knight",
+    "group": "Origin"
+  },
+  "game:90003": {
+    "name": "LARA CROFT AND THE TEMPLE OF OSIRIS",
+    "group": "Origin"
+  },
+  "game:90004": {
+    "name": "Just Cause 3",
+    "group": "Origin"
+  },
+  "game:90005": {
+    "name": "Deus Ex: Mankind Divided",
+    "group": "Origin"
+  },
+  "game:90006": {
+    "name": "Katy Perry",
+    "group": "Origin"
+  }
+}

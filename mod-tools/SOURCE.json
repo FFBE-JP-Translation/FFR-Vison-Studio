@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "origin": "FFR mod development workspace",
+  "originRevision": "96a06f7d2e75246c6c03cf1b0d11f751a16b9794",
+  "includesLocalSourceChanges": true,
+  "sourceFilesImported": 519,
+  "note": "First-party source imported into the Vision Studio repository. Develop and package from mod-tools; generated game data, media, third-party binaries and personal mod rosters remain external."
+}

@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FFR Vision Studio</title>
+<meta name="description" content="Put Final Fantasy Brave Exvius units into the FINAL FANTASY RESONANCE demo. A Windows app: pick a unit, give it the game's abilities, press GO.">
+<link rel="icon" type="image/png" href="img/app_icon.png">
+<script>
+  // Google Analytics (G-10SGQ89G5Z). The default events (page views and the like) are always collected: a visitor who declines
+  // switches the counter to cookieless pings (Consent Mode), so a visit is still logged and nothing is stored on their side.
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){ dataLayer.push(arguments); }
+  gtag('consent', 'default', { ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied', analytics_storage: 'granted' });
+  try { if (localStorage.getItem('ffr-consent') === 'denied') gtag('consent', 'update', { analytics_storage: 'denied' }); } catch (e) {}
+</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-10SGQ89G5Z"></script>
+<script>
+  gtag('js', new Date());
+  gtag('config', 'G-10SGQ89G5Z');
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;1,400&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --desk:#cfcbc2; --paper:#fff; --paper2:#f4f2ed; --ink:#121212; --soft:#5a5751; --faint:#9a968d; --hair:#d9d5cc; --blue:#1f4fd0; --gold:#d9a21b; --red:#d42b2b; --green:#178a45; }
+  * { box-sizing:border-box }
+  html,body { margin:0; background:var(--desk); color:var(--ink); font:17px/1.5 Barlow, "Segoe UI", system-ui, sans-serif; }
+  .page { max-width:860px; margin:48px auto; background:var(--paper); box-shadow:0 18px 40px rgba(0,0,0,.28), 0 2px 0 rgba(0,0,0,.25); }
+  .head { display:flex; align-items:center; gap:18px; padding:28px 34px 22px; }
+  .face { width:74px; height:56px; background:var(--blue); border:2px solid var(--ink); overflow:hidden; flex:none; display:flex; align-items:center; justify-content:center; }
+  .face img { width:100%; height:auto; image-rendering:pixelated; margin-top:-4px; }
+  .word { display:flex; flex-direction:column; gap:3px; }
+  .word .over { display:flex; align-items:center; gap:10px; }
+  .word .tag { background:var(--blue); color:#fff; font:700 12px/1.1 "Barlow Condensed", sans-serif; letter-spacing:1.5px; padding:3px 7px; }
+  .word .kicker { font:600 11px/1 "Barlow Condensed", sans-serif; letter-spacing:1px; color:var(--soft); text-transform:uppercase; }
+  h1 { margin:0; font:800 40px/1 "Barlow Condensed", Barlow, sans-serif; letter-spacing:-.3px; text-transform:uppercase; }
+  .band { background:var(--blue); color:#fff; font:700 14px/1 "Barlow Condensed", sans-serif; letter-spacing:.8px; text-transform:uppercase; padding:9px 14px; display:flex; justify-content:space-between; }
+  .band.gold { background:var(--gold); color:var(--ink) } .band.ink { background:var(--ink) }
+  .cross { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; gap:22px; padding:22px 34px; border-top:2px solid var(--ink); border-bottom:2px solid var(--ink); background:var(--paper); }
+  .cross .logo { display:flex; align-items:center; justify-content:center; }
+  .cross .logo img { max-height:120px; max-width:100%; height:auto; }
+  .cross .logo.ffr img { max-height:140px; }
+  .cross .x { font:800 34px/1 "Barlow Condensed", sans-serif; color:var(--ink); }
+  .cross .cap { grid-column:1 / -1; text-align:center; font-size:14px; color:var(--soft); margin-top:-6px; }
+  .body { padding:24px 34px 30px; }
+  .cols { display:grid; grid-template-columns: minmax(0,1fr) 300px; gap:26px; }
+  @media (max-width:720px){ .cols{ grid-template-columns:minmax(0,1fr) } .page{ margin:0 } .cross{ grid-template-columns:minmax(0,1fr); } .cross .x{ display:none } }
+  p { margin:0 0 12px }
+  .box { border:2px solid var(--ink); }
+  .box .row { display:flex; justify-content:space-between; padding:7px 12px; font-size:14px; }
+  .box .row:nth-child(even){ background:var(--paper2) }
+  .box .row b { font-weight:600 }
+  .num { font-variant-numeric: tabular-nums; }
+  .go { display:inline-flex; align-items:center; gap:10px; background:var(--red); color:#fff; border:2px solid var(--ink); text-decoration:none; padding:13px 20px; font:700 20px/1 "Barlow Condensed", sans-serif; letter-spacing:.8px; text-transform:uppercase; }
+  .go:hover { filter:brightness(.92) }
+  .steps { counter-reset: s; list-style:none; margin:0; padding:0; }
+  .steps li { counter-increment:s; display:flex; gap:12px; padding:8px 0; border-top:1px solid var(--hair); }
+  .steps li::before { content: counter(s); font:700 14px/1 "Barlow Condensed", sans-serif; color:var(--faint); min-width:16px; padding-top:4px; }
+  .steps li:first-child { border-top:0 }
+  .small { font-size:14px; color:var(--soft) }
+  .fine { margin-top:18px; font-size:12px; color:var(--faint); }
+  code { font: 14px/1.4 Consolas, "Cascadia Mono", monospace; background:var(--paper2); padding:1px 5px; }
+  a { color:var(--blue) }
+  .links .row a { color:var(--ink); font-weight:600; text-decoration:none; }
+  .links .row a:hover { text-decoration:underline }
+  .links .row .out { color:var(--faint); font:700 12px/1 "Barlow Condensed", sans-serif; letter-spacing:.8px; text-transform:uppercase; }
+  .made { margin-top:16px; padding-top:12px; border-top:1px solid var(--hair); font-size:14px; color:var(--soft); display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  .made a { color:var(--ink); font-weight:600; text-decoration:none; border-bottom:2px solid var(--gold); }
+  .made a:hover { background:var(--gold) }
+  .consent { position:fixed; left:0; right:0; bottom:0; z-index:10; background:var(--paper); border-top:2px solid var(--ink); box-shadow:0 -10px 30px rgba(0,0,0,.18); padding:14px 34px; display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
+  .consent .lbl { background:var(--ink); color:#fff; font:700 12px/1.1 "Barlow Condensed", sans-serif; letter-spacing:1.5px; text-transform:uppercase; padding:4px 7px; flex:none; }
+  .consent p { margin:0; flex:1 1 320px; font-size:15px; }
+  .consent .acts { display:flex; gap:8px; flex:none; }
+  .consent button { font:700 15px/1 "Barlow Condensed", sans-serif; letter-spacing:.8px; text-transform:uppercase; padding:10px 16px; border:2px solid var(--ink); background:var(--paper); color:var(--ink); cursor:pointer; }
+  .consent button.yes { background:var(--blue); color:#fff; }
+  .consent button:hover { filter:brightness(.92) }
+  [hidden] { display:none !important }
+</style>
+</head>
+<body>
+<main class="page">
+  <div class="head">
+    <div class="face"><img src="img/rain_icon.png" alt="" width="56" height="38"></div>
+    <div class="word">
+      <div class="over"><span class="tag">FFR</span><span class="kicker">Brave Exvius visions for the demo</span></div>
+      <h1>Vision Studio</h1>
+    </div>
+  </div>
+  <section aria-labelledby="memorial-heading" style="padding:20px 34px;background:var(--paper2);border-top:2px solid var(--ink)">
+    <h2 id="memorial-heading" style="margin:0 0 6px;font:700 25px/1.2 'Barlow Condensed',sans-serif">Looking for FFBE Memorial in English?</h2>
+    <p style="margin:0">The English translation of FFBE Memorial is available for Android. <a href="/downloads/" style="font-weight:600">Go to downloads</a> for the APK and FFR Vision Studio for Windows.</p>
+  </section>
+  <div class="cross">
+    <div class="logo ffr"><img src="img/ffr_logo.png" alt="FINAL FANTASY RESONANCE DEMO"></div>
+    <div class="x">×</div>
+    <div class="logo"><img src="img/ffbe_logo.jpg" alt="FINAL FANTASY BRAVE EXVIUS"></div>
+    <div class="cap">Units from Brave Exvius, playable in the RESONANCE demo.</div>
+  </div>
+  <div class="band"><span>Download</span><span>version {{VERSION}} · build {{BUILD}} · Windows 10 / 11</span></div>
+  <div class="body">
+    <div class="cols">
+      <div>
+        <p>A Windows app that puts Final Fantasy Brave Exvius units into the FINAL FANTASY RESONANCE demo. Pick a unit. Drag the game's own abilities and passives onto its awakening tiers. Set the stats. Its Resonance uses its own FFBE limit-burst motion, charging sound and attack sounds, with an elemental field color you can customize. Press GO and the unit is in the Mitra item shop the next time you start the game.</p>
+        <p>Build 15 restores unit imports and Brave Shift choices in Advanced Studio. Create your own units with a PNG sprite sheet, animation JSON and an editable profile, with downloadable templates to get started. Browsing uses cached idle previews; adding a hosted unit downloads its complete data with progress shown before the editor opens. Incomplete resonances remain labelled while their mechanics, sounds and effects are being expanded.</p>
+        <p>The first start downloads the engine and data packs, then reads your copy of the game once. Nothing in the game folder changes until you press "Install into the game", and one button puts the game back the way Steam installed it.</p>
+        <p style="margin:22px 0 8px"><a class="go" href="{{APP_URL}}">Download FFR Vision Studio</a></p>
+        <p class="small">A zip. Unpack it anywhere and start <code>FFR Vision Studio.exe</code>. No installer, no scripts.</p>
+        <div class="band ink" style="margin-top:22px"><span>Before you start</span></div>
+        <ol class="steps" style="margin-top:8px">
+          <li><span>The FINAL FANTASY RESONANCE demo installed through Steam. The app finds it on its own; if it is somewhere unusual, browse to the folder that holds <code>FFRS.exe</code>.</span></li>
+          <li><span>Keep the game closed while installing. The mod is three files in <code>FFRS/Content/Paks/~mods</code>; the app backs up whatever it replaces and "Restore the original game" removes them again.</span></li>
+          <li><span>Windows may warn about an unsigned download. Choose "More info" and "Run anyway"; the app and its engine are open source.</span></li>
+        </ol>
+      </div>
+      <div>
+        <div class="band gold"><span>What you get</span></div>
+        <div class="box" style="border-top:0">
+          <div class="row"><span>Units to choose from</span><b class="num">{{UNITS}}</b></div>
+          <div class="row"><span>Looks with sprites</span><b class="num">{{LOOKS}}</b></div>
+          <div class="row"><span>Game abilities to grant</span><b>hundreds</b></div>
+          <div class="row"><span>Resonance motion</span><b>Own FFBE LB</b></div>
+          <div class="row"><span>Awakening tiers</span><b class="num">4 × 8</b></div>
+        </div>
+        <p class="small" style="margin-top:14px">All {{LOOKS}} idle previews arrive in one download (about 68 MiB), reused until the previews change. Full unit packs download when you press "Add unit"; icons and common sounds are shared.</p>
+        <p class="small">Modders: the Advanced studio (Brave Exvius kit imports, sprite settings, animation edits) opens from the app in your browser and works on the same units.</p>
+        <div class="band ink" style="margin-top:22px"><span>Follow the project</span></div>
+        <div class="box links" style="border-top:0">
+          <div class="row"><a href="https://github.com/FFBE-JP-Translation/FFR-Vison-Studio" target="_blank" rel="noopener">Source on GitHub</a><span class="out">open source</span></div>
+          <!-- The dev journey: put the post's URL in the href and take the comment markers off this row when it is live.
+          <div class="row"><a href="https://luminest.io/blog/ffr-vision-studio" target="_blank" rel="noopener">Read the dev journey</a><span class="out">blog</span></div>
+          -->
+        </div>
+      </div>
+    </div>
+    <p class="fine">Fan project. Not affiliated with Square Enix. FINAL FANTASY, FINAL FANTASY RESONANCE and FINAL FANTASY BRAVE EXVIUS and their logos are trademarks of Square Enix Holdings Co., Ltd., shown here to name the games. Game files stay on your machine; the app only downloads its own engine and data from this host.</p>
+    <div class="made"><span>Made with 💜 by <a href="https://luminest.io" target="_blank" rel="noopener">Luminest</a></span><span class="small">version {{VERSION}} · build {{BUILD}}</span></div>
+  </div>
+</main>
+<div class="consent" id="consent" hidden>
+  <span class="lbl">Cookies</span>
+  <p>This page counts its visits with Google Analytics; that helps us gauge interest in the project. Decline, and the count goes on without a cookie.</p>
+  <div class="acts"><button class="yes" id="consent-yes" type="button">Okay</button><button id="consent-no" type="button">No cookie</button></div>
+</div>
+<script>
+  (function () {
+    var KEY = 'ffr-consent', bar = document.getElementById('consent'), choice = null;
+    try { choice = localStorage.getItem(KEY); } catch (e) {}
+    if (choice === 'granted' || choice === 'denied') return;
+    bar.hidden = false;
+    document.getElementById('consent-yes').onclick = function () {
+      try { localStorage.setItem(KEY, 'granted'); } catch (e) {}
+      bar.hidden = true;
+    };
+    document.getElementById('consent-no').onclick = function () {
+      try { localStorage.setItem(KEY, 'denied'); } catch (e) {}
+      gtag('consent', 'update', { analytics_storage: 'denied' });
+      bar.hidden = true;
+    };
+  })();
+</script>
+</body>
+</html>
